@@ -1,5 +1,5 @@
 ################################################################################
-#' @description Repeat steps preparing survey and hdss data on overall data
+#' @description Repeat steps preparing survey and hdss data on overall data that has been matched by date
 #' @return 
 ################################################################################
 #' Clear environment
@@ -10,8 +10,38 @@ library(dplyr)
 library(haven)
 #' Inputs
 # survey_final_all2: livebirth and stillbirth records from the survey
-dat <- read_dta("./data/ACSU5MR_FILES/overall.dta")
+dat <- read_dta("./data/20250930/overall_date.dta")
 ################################################################################
+
+# parity variable investigation
+dat %>%
+  select(rid_m, parity, parity0) %>%
+  arrange(rid_m, parity) %>%
+  head()
+dat %>%
+  filter(rid_m == "3D90015808")  %>%
+  select(rid_m, parity, parity0, c223, preg_res_dss) %>%
+  arrange(rid_m, parity)
+# in overall, this person has parity going from 2 to 5 and it does not include abortions.
+# conclusion: the parity variable in overall comes from the survey file. 
+# it is calculated from the number of entries a woman has in the FPH.
+# I want to use the parity variable from the HDSS. Need to merge on.
+
+# examine labels
+labels <- sapply(dat, function(x) attr(x, "label") %||% NA_character_)
+df_labels <- tibble(
+  variable = names(labels),
+  label = labels)
+#View(df_labels)
+
+nrow(dat) # 2505
+length(unique(dat$rid_m)) # 847
+length(unique(dat$rid_c)) # 1970
+length(unique(dat$serial1)) # 847
+length(unique(dat$Userial1)) # 821
+length(unique(dat$serial)) # 2382
+length(unique(dat$uid_c)) # 2383
+length(unique(dat$uid_c_dss)) # 1899
 
 # replace blank spaces with NA
 dat <- dat %>%
@@ -21,7 +51,26 @@ dat <- dat %>%
 dat <- dat %>%
   mutate(across(where(is.labelled), ~as_factor(.)))
 
-# Cleaning of data from survey --------------------------------------------
+# Cleaning variables from survey --------------------------------------------
+
+# pregnancy outcome
+dat <- dat %>%
+  mutate(preg_res_surv = as.character(c223)) %>%
+  mutate(preg_res_surv = case_when(
+    preg_res_surv == "Born alive" ~ "Live birth",
+    preg_res_surv == "Born dead" ~ "Stillbirth",
+    TRUE ~ preg_res_surv
+  ))
+
+# child status
+dat <- dat %>%
+  mutate(cstatus_surv = case_when(
+    preg_res_surv == "Live birth" & c224 == "No" ~ "Died",
+    preg_res_surv == "Live birth" & c224 == "Yes" ~ "Surviving",
+    preg_res_surv == "Miscarriage" ~ "Miscarriage",
+    preg_res_surv == "Abortion" ~ "Abortion",
+    TRUE ~ preg_res_surv
+  ))
 
 # Initial removal of unnecessary survey columns
 dat <- dat %>%
@@ -52,6 +101,10 @@ nrow(subset(dat, is.na(dob_c_sur))) # 0
 # dob_c_sur is never missing, so keep that
 dat <- dat %>%
   select(-c220_a)
+
+# convert int_date to a date
+dat <- dat %>%
+  mutate(int_date = as.Date(int_date, format = "%Y-%m-%d"))
 
 # create single column for age of death
 # these columns are a bit inconsistent
@@ -92,14 +145,14 @@ dat$aady[which(dat$aad_unit == 2)] <- dat$aady[which(dat$aad_unit == 2)] / 12
 dat <- dat %>%
   select(-c(c228, c228_aa, c228_bb, c228_ccc, c228_cc, c228_d, c228_B))
 
-# recode c223
-dat <- dat %>%
-  mutate(c223 = as.character(c223)) %>%
-  mutate(c223 = case_when(
-    c223 == "Born alive" ~ "Live birth",
-    c223 == "Born dead" ~ "Stillbirth",
-    TRUE ~ NA
-  ))
+# # recode c223
+# dat <- dat %>%
+#   mutate(c223 = as.character(c223)) %>%
+#   mutate(c223 = case_when(
+#     c223 == "Born alive" ~ "Live birth",
+#     c223 == "Born dead" ~ "Stillbirth",
+#     TRUE ~ NA
+#   ))
 
 # seem to be some variables that are permutations of others
 # would be good to only keep essential ones out of c220, c220_a, c220_b, etc
@@ -107,24 +160,54 @@ dat <- dat %>%
 # va1, va2, va3, va4 etc
 
 # Coalesce va
+# This is mother-level cause strata
 dat <- dat %>%
-  mutate(va = coalesce(va1, va2, va3, va4, va5, va6, va7)) %>%
+  mutate(mstrata_c = coalesce(va1, va2, va3, va4, va5, va6, va7)) %>%
   select(-c(va1, va2, va3, va4, va5, va6, va7))
+# NoStrata, Birth Asphyxia, Other, RI+Congenital, Drowning 
 
-# Cleaning of data from hdss ----------------------------------------------
+# Rename other mother-level strata to match survey file
+dat <- dat %>%
+  rename(
+    mstrata_a = sample, 
+    mstrata_ac = sample2
+  )
+
+# assign child-level strata by age
+dat <- dat %>%
+  mutate(cstrata_a_surv = case_when(
+    cstatus_surv == "Abortion" ~ "Abortion",
+    cstatus_surv == "Miscarriage" ~ "Miscarriage",
+    cstatus_surv == "Stillbirth" ~ "Stillbirth",
+    cstatus_surv == "Surviving" ~ "Surviving",
+    cstatus_surv == "Died" & aadd < 28 ~ "Neonatal",
+    cstatus_surv == "Died" & aadd >= 28 & aadd < 365 ~ "Postneonatal",
+    cstatus_surv == "Died" & aadd >= 365 & aadd < 5*365 ~ "1-4",
+    cstatus_surv == "Died" & aadd >= 5*365 & aadd < 10*365 ~ "5-9",
+    cstatus_surv == "Died" & aadd >= 10*365 ~ "10+",
+    TRUE ~ NA
+  )) 
+
+# Cleaning variables from hdss ----------------------------------------------
 
 # Renaming HDSS columns that want to keep in overall
 dat <- dat %>%
+  mutate(preg_res_dss = as.character(preg_res_dss)) %>%
   mutate(preg_res_dss = case_when(
-    preg_res_dss == "1" ~ "Live birth",
-    preg_res_dss == "2" ~ "Stillbirth",
-    preg_res_dss == "3" ~ "Miscarriage",
-    preg_res_dss == "4" ~ "Abortion",
+    # preg_res_dss == "1" ~ "Live birth",
+    # preg_res_dss == "2" ~ "Stillbirth",
+    # preg_res_dss == "3" ~ "Miscarriage",
+    # preg_res_dss == "4" ~ "Abortion",
+    preg_res_dss == "Livebirth" ~ "Live birth",
     TRUE ~ preg_res_dss
   ))
 
+# convert mother's in-migration date
+dat <- dat %>%
+  mutate(mot_in_date = as.Date(mot_in_date, format = "%d-%b-%Y"))
+
 # Save output(s) ----------------------------------------------------------
 
-saveRDS(dat, "./gen/overall-clean.rds")
+saveRDS(dat, "./gen/overall-date-clean.rds")
 
 

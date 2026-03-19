@@ -10,14 +10,74 @@ library(dplyr)
 library(haven)
 #' Inputs
 # survey_final_all2: livebirth and stillbirth records from the survey
-dat <- read_dta("./data/ACSU5MR_FILES/survey_final_all2.dta")
+dat <- read_dta("./data/20250930/survey_final_all2.dta")
 ################################################################################
+
+# parity variable investigation
+# how is this parity variable created? does it just match the number entry for the preg?
+unique(dat$match_n)
+dat %>%
+  filter(match_n == 3) %>%
+  select(rid_m, parity_n_sur, parity_s_sur) %>%
+  arrange(rid_m, parity_n_sur) %>%
+  head()
+dat %>%
+  select(rid_m, c215_a, c223, parity_n_sur, parity_s_sur) %>%
+  filter(c215_a != parity_n_sur)
+dat %>%
+  filter(rid_m == "3D90015808") %>%
+  select(rid_m, c215_a, c223, parity_n_sur, parity_s_sur) %>%
+  arrange(c215_a)
+# in the survey, this person has parity going up to 6. and it includes 2 abortions.
+
+# examine labels
+labels <- sapply(dat, function(x) attr(x, "label") %||% NA_character_)
+df_labels <- tibble(
+  variable = names(labels),
+  label = labels)
+#View(df_labels)
+
+nrow(dat) # 2648
+length(unique(dat$rid_m)) # 848
+length(unique(dat$rid_c)) # 1970
+length(unique(dat$serial)) # 2648 is the unique variable
+
+# rid_m is never missing for mothers
+nrow(subset(dat, is.na(rid_m))) # 0
+
+# replace blank spaces with NA
+dat <- dat %>%
+  mutate(across(where(is.character), ~ ifelse(trimws(.) == "", NA, .)))
+
+# not all children have an rid_c
+# when child's rid_c is missing, it could be any pregnancy outcome
+table(subset(dat, is.na(rid_c))$c223, useNA = "always")
 
 # convert labeled values to factors
 dat <- dat %>%
   mutate(across(where(is.labelled), ~as_factor(.)))
 
-# Initial removal of unnecesary columns
+# pregnancy outcome
+dat <- dat %>%
+  mutate(preg_res_surv = as.character(c223)) %>%
+  mutate(preg_res_surv = case_when(
+    preg_res_surv == "Born alive" ~ "Live birth",
+    preg_res_surv == "Born dead" ~ "Stillbirth",
+    TRUE ~ preg_res_surv
+  ))
+
+# child status
+dat <- dat %>%
+  mutate(cstatus_surv = case_when(
+    preg_res_surv == "Live birth" & c224 == "No" ~ "Died",
+    preg_res_surv == "Live birth" & c224 == "Yes" ~ "Surviving",
+    preg_res_surv == "Miscarriage" ~ "Miscarriage",
+    preg_res_surv == "Abortion" ~ "Abortion",
+    TRUE ~ preg_res_surv
+  ))
+
+
+# Initial removal of unnecessary columns
 dat <- dat %>%
   select(-c(c200, # section start time
             c216, c216_a, cal_216, # non final preg outcome information
@@ -30,7 +90,7 @@ dat <- dat %>%
             starts_with("w"), # asset ownership
             a000, b00, b000, c100, c1000, c2000, c3000, d00, d000, dd, # a end time, b start time, b end time, c start time
             `__version__`, metainstanceID, `_parent_index`,
-            name_head, name_m, cid_m, rid_m, # mother names and ids
+            name_head, name_m, cid_m, # mother names and ids
             uid_c, uid_c_sur))
 
 # create column for date of birth
@@ -43,6 +103,10 @@ dat <- dat %>%
 # rename c220 to match overall file
 dat <- dat %>%
   rename(dob_c_sur = c220)
+
+# convert int_date to a date
+dat <- dat %>%
+  mutate(int_date = as.Date(int_date, format = "%Y-%m-%d"))
 
 # create single column for age of death
 # these columns are a bit inconsistent
@@ -83,6 +147,21 @@ dat$aady[which(dat$aad_unit == 2)] <- dat$aady[which(dat$aad_unit == 2)] / 12
 dat <- dat %>%
   select(-c(c228, c228_aa, c228_bb, c228_ccc, c228_cc, c228_d, c228_B))
 
+# assign child-level strata by age
+dat <- dat %>%
+  mutate(cstrata_a_surv = case_when(
+    cstatus_surv == "Abortion" ~ "Abortion",
+    cstatus_surv == "Miscarriage" ~ "Miscarriage",
+    cstatus_surv == "Stillbirth" ~ "Stillbirth",
+    cstatus_surv == "Surviving" ~ "Surviving",
+    cstatus_surv == "Died" & aadd < 28 ~ "Neonatal",
+    cstatus_surv == "Died" & aadd >= 28 & aadd < 365 ~ "Postneonatal",
+    cstatus_surv == "Died" & aadd >= 365 & aadd < 5*365 ~ "1-4",
+    cstatus_surv == "Died" & aadd >= 5*365 & aadd < 10*365 ~ "5-9",
+    cstatus_surv == "Died" & aadd >= 10*365 ~ "10+",
+    TRUE ~ NA
+  )) 
+
 # Rename columns that actually came from the DSS to make that clear
 dat <- dat %>%
   rename(dob_m_dss = dob_m,
@@ -92,10 +171,21 @@ dat <- dat %>%
 # seem to be some variables that are permutations of others
 # would be good to only keep essential ones out of c220, c220_a, c220_b, etc
 
-# Coalesce va
+# examine new variables
+# dat %>%
+#   select(match_n, serial1, rid_m, rid_c, sample, sample2, std_peri, age_out_m, age_extraction_m, mig_result, mig_result) %>%
+#   View()
+unique(dat$sample) # mother-level strata by age of index child
+unique(dat$sample2) # mother-level strata by age/cod of index child
+# Rename mother-level strata to clarify whether by age or cause
 dat <- dat %>%
-  mutate(va = coalesce(va1, va2, va3, va4, va5, va6, va7)) %>%
-  select(-c(va1, va2, va3, va4, va5, va6, va7))
+  rename(
+    mstrata_a = sample, 
+    mstrata_ac = sample2
+  )
+
+# !!!! i used to remove rid_m in line 39
+# keeping now
 
 # Save output(s) ----------------------------------------------------------
 
