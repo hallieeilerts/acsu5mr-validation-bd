@@ -12,7 +12,7 @@ library(haven)
 # hdss_final_all2: livebirth and stillbirth records from the HDSS
 hdss <- read_dta("./data/ACSU5MR_FILES/hdss_final_all2.dta")
 # survey_final_all2: livebirth and stillbirth records from the survey
-survey <- read_dta("./data/ACSU5MR_FILES/survey_final_all2.dta")
+survey <- read_dta("./data/20250930/survey_final_all2.dta")
 # overall: linked file (it contains the match variable (match_level))
 overall <- read_dta("./data/ACSU5MR_FILES/overall.dta")
 ################################################################################
@@ -83,14 +83,6 @@ names(overall)[which(!(names(overall) %in% c(names(hdss), names(survey))))]
 
 # Survey ------------------------------------------------------------------
 
-nrow(survey) # 2612
-length(unique(survey$serial1)) # 836
-length(unique(survey$serial)) # 2612, sequential count
-length(unique(survey$`_index`)) # 836 women
-length(unique(survey$`_index1`)) # 2612 children
-
-# need to convert labels to factors
-
 # Includes
 # va1-va7: recode of major cause (Icd10_n). column number aligns with sample number found in 1
 # sample : age strata
@@ -121,11 +113,58 @@ length(unique(survey$`_index1`)) # 2612 children
 # x0_3
 # x1 interview result
 
+# examine labels
+labels <- sapply(survey, function(x) attr(x, "label") %||% NA_character_)
+df_labels <- tibble(
+  variable = names(labels),
+  label = labels)
+#View(df_labels)
+
+# replace blank spaces with NA
+survey <- survey %>%
+  mutate(across(where(is.character), ~ ifelse(trimws(.) == "", NA, .)))
+
 # Variables that are always missing
 survey %>%  
   summarise(across(everything(), ~ sum(is.na(.)) / n())) %>%
   pivot_longer(cols = everything()) %>%
   filter(value == 1)
+
+# matching variable
+unique(survey$match_n)
+
+# ID variables
+nrow(survey) # 2648
+length(unique(survey$serial1)) # 848 women
+length(unique(survey$serial)) # 2648
+length(unique(survey$`_index`)) # 848 women
+length(unique(survey$`_index1`)) # 2648
+length(unique(survey$rid_m)) # 848
+length(unique(survey$rid_c)) # 1970
+
+# rid_m is never missing
+nrow(subset(survey, is.na(rid_m))) # 0
+# rid_c is missing sometimes
+nrow(subset(survey, is.na(rid_c))) # 679
+# when child's rid_c is missing, it could be any pregnancy outcome
+table(subset(survey, is.na(rid_c))$c223, useNA = "always")
+
+# parity variable investigation
+# how is this parity variable created? does it just match the number entry for the preg?
+survey %>%
+  filter(match_n == 3) %>%
+  select(rid_m, parity_n_sur, parity_s_sur) %>%
+  arrange(rid_m, parity_n_sur) %>%
+  head()
+survey %>%
+  select(rid_m, c215_a, c223, parity_n_sur, parity_s_sur) %>%
+  filter(c215_a != parity_n_sur)
+survey %>%
+  filter(rid_m == "3D90015808") %>%
+  select(rid_m, c215_a, c223, parity_n_sur, parity_s_sur) %>%
+  arrange(c215_a)
+# in the survey, this person has parity going up to 6. and it includes 2 abortions.
+
 
 # HDSS --------------------------------------------------------------------
 

@@ -10,30 +10,38 @@
 #source("./src/process-kobo/explore-kobo.R", local = new.env())
 #source("./src/process-kobo/clean-cols.R", local = new.env())
 
-# Basic exploration -------------------------------------------------------
+# Cleaning ----------------------------------------------------------------
 
 # now working with processed spreadsheets shared by icddr,b team
 
-source("./src/basic-exploration.R", local = new.env())
-#source("./src/prep-mother-migration.R", local = new.env())
-source("./src/prep-survey.R", local = new.env())
-source("./src/prep-hdss.R", local = new.env())
-source("./src/prep-overall-date.R", local = new.env())
-source("./src/augment-overall-date.R", local = new.env())
+source("./src/clean/basic-exploration.R", local = new.env())
+source("./src/clean/prep-survey.R", local = new.env())
+source("./src/clean/prep-hdss.R", local = new.env())
+source("./src/clean/prep-overallDate.R", local = new.env())
+source("./src/clean/prep-overallDob.R", local = new.env())
+
+# Create augmented files that include all records -------------------------
+
+source("./src/augment/augment-overallDate.R", local = new.env())
+source("./src/augment/recode-overallDate.R", local = new.env())
+
+# to do
+#source("./src/augment/augment-overallDob.R", local = new.env())
+#source("./src/augment/recode-overallDob.R", local = new.env())
+
+# Analysis ----------------------------------------------------------------
+
+source("./src/analysis/overall-agg-denomAB.R", local = new.env())
+source("./src/analysis/overallDate-event-denomE.R", local = new.env())
+
+
+# Other -------------------------------------------------------------------
+
 source("./src/sample-qualitative.R", local = new.env())
 
 source("./src/check-agreement.R", local = new.env())
 
 source("./src/paa-figures.R", local = new.env())
 
-# start with aggregate analysis of number of events reported
-## same total number of live births?
-## same total number of stillbirths
-# then look at event-level matches
-# file matched on dob
-## misclassification of stillbirth/live birth
-## age transferrence
-# file matched on name
-## date displacement
-
-
+# sample size for non-inferiority trial for natural language processing fph
+source("./src/sample-size-NLP-nFPH.R", local = new.env())

@@ -1,5 +1,6 @@
 ################################################################################
 #' @description check agreement between surveys and hdss
+#' this file is old.
 #' @return 
 ################################################################################
 #' Clear environment
@@ -10,7 +11,7 @@ library(dplyr)
 library(ggplot2)
 library(lubridate)
 #' Inputs
-dat <- readRDS("./gen/overall-aug.rds")
+dat <- readRDS("./gen/augment/overallDate-aug.rds") 
 ################################################################################
 
 # N/per of matched/no matched validation study records by mother strata

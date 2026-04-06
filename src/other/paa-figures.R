@@ -12,10 +12,10 @@ library(haven)
 library(lubridate)
 library(viridis)
 #' Inputs
-hdss <- read_dta("C:/Users/HEilerts/Institute of International Programs Dropbox/Hallie Eilerts-Spinelli/ACSU5MR/acsu5mr-validation-bd/data/ACSU5MR_FILES/hdss_final_all2.dta")
-survey <- read_dta("C:/Users/HEilerts/Institute of International Programs Dropbox/Hallie Eilerts-Spinelli/ACSU5MR/acsu5mr-validation-bd/data/ACSU5MR_FILES/survey_final_all2.dta")
-overall <- read_dta("C:/Users/HEilerts/Institute of International Programs Dropbox/Hallie Eilerts-Spinelli/ACSU5MR/acsu5mr-validation-bd/data/ACSU5MR_FILES/overall.dta")
-overall_aug <- readRDS("C:/Users/HEilerts/Institute of International Programs Dropbox/Hallie Eilerts-Spinelli/ACSU5MR/acsu5mr-validation-bd/reports/preliminary-assessment/gen-files-used/overall-aug.rds")
+hdss <- read_dta("./data/ACSU5MR_FILES/hdss_final_all2.dta")
+survey <- read_dta("./data/ACSU5MR_FILES/survey_final_all2.dta")
+overall <- read_dta("./data/ACSU5MR_FILES/overall.dta")
+overall_aug <- readRDS("./reports/preliminary-assessment/gen-files-used/overall-aug.rds")
 ################################################################################
 
 mypal2 <- rev(plasma(n = 3)[1:2])

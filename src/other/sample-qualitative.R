@@ -8,7 +8,7 @@ rm(list = ls())
 library(tidyr)
 library(dplyr)
 #' Inputs
-overall <- readRDS("C:/Users/HEilerts/Institute of International Programs Dropbox/Hallie Eilerts-Spinelli/ACSU5MR/acsu5mr-validation-bd/gen/overall-date-aug.rds")
+overall <- readRDS("./gen/augment/overallDate-aug.rds")
 ################################################################################
 
 # Limit to mothers with residency episodes starting more than 5 years prior
