@@ -42,6 +42,35 @@ nrow(subset(overall, type == "VS_Match" & is.na(cstatus_agesp_dss)))  # 0
 # in two cases, we do not have cod information
 nrow(subset(overall, type == "VS_Match" & is.na(cod_c_dss) & cstatus_dss == "Died")) # 2
 
+# were multiple different survey records matched to the same dss record?
+overall %>%
+  group_by(uid_c_dss) %>%
+  mutate(n = n()) %>%
+  filter(!is.na(uid_c_dss) & n > 1) %>%
+  nrow() # 8
+overall %>%
+  group_by(uid_c_dss) %>%
+  mutate(n = n()) %>%
+  filter(!is.na(uid_c_dss) & n > 1) %>%
+  select(type, uid_c_dss, uid_c_sur, cid_m, 
+         pregout_dss, cstatus_dss, cod_c_dss, dob_c_dss, 
+         c215, c218, c220, c223) 
+# were multiple different dss matched to the same survey record?
+overall %>%
+  group_by(uid_c_sur) %>%
+  mutate(n = n()) %>%
+  filter(!is.na(uid_c_sur) & n > 1) %>%
+  nrow() # 8
+overall %>%
+  group_by(uid_c_sur) %>%
+  mutate(n = n()) %>%
+  filter(!is.na(uid_c_sur) & n > 1) %>%
+  select(type, uid_c_dss, uid_c_sur, cid_m, 
+       pregout_dss, cstatus_dss, cod_c_dss, dob_c_dss, 
+       c215, c218, c220, c223) 
+# looks like some duplicate singles records (uid_c_dss == 1027+2, 1530+5)
+# and then a couple double matches for twins
+
 # Add from DSS ------------------------------------------------------------
 
 # parity variable from dss is missing in overall file
@@ -78,6 +107,9 @@ cod_key <- overall %>%
   filter(n == 1 & !is.na(cod_c_dss)) %>%
   select(mstrata_ac, cstatus_agesp_dss, cod_c_dss) %>%
   distinct()
+# remove the ill-defined causes from the cod_key
+cod_key <- cod_key %>% 
+  filter(!(cod_c_dss %in% c("R99", "MH14")))
 
 # check for errors in key
 # any cases where the icd code was assigned to two different maternal age/cause strata for the same age group
@@ -156,11 +188,14 @@ overall %>% filter(rid_m == "4V26033506") %>%
 hdss %>% filter(rid_m == "4V26033506") %>%
   select(rid_m, rid_c, pregout_dss, cstatus_dss, cod_c_dss)
 # mother 3 has three children. two died and they are twins. one was assigned KB21 and one was assigned KB23
-# KB21 is birth asphyxia and KB23 means respiratory distress. So in this case, both should probably be Neonatal (birth asphyxia)
+# KB21 is birth asphyxia and KB23 means respiratory distress of newborn
+# KB23 is shortly after birth
+# in this case it's ok if the mother is Neonatal (other), as it could be referring to the KB23 child
 overall %>% filter(rid_m == "5VB0045606") %>%
   select(cid_m, c215, pregout_dss, cstatus_dss, cod_c_dss) 
 hdss %>% filter(rid_m == "5VB0045606") %>%
   select(rid_m, rid_c, dob_c_dss, pregout_dss, cstatus_dss, cod_c_dss)
+# dont recode mstrata for "5VB0045606"
 
 # case 4
 overall %>%
@@ -182,14 +217,15 @@ overall %>% filter(rid_m == "2V17004007") %>%
 hdss %>% filter(rid_m == "2V17004007") %>%
   select(rid_m, rid_c, pregout_dss, cstatus_dss, cod_c_dss)
 
-# Conclusion: yes, correct the mother-level strata in the overall file as well.
+v_exceptions <- c("5VB0045606")
+# Conclusion: yes, correct the mother-level strata in the overall file as well, except for vector with exceptions
 overall <- overall %>%
   mutate(
     mstrata_ac = case_when(
-      mstrata_ac == "Postneonatal (RI+con)" & cod_c_dss == "1G40" ~ "Postneonatal (other)",
-      mstrata_ac == "Neonatal (birth asphyxia)" & cod_c_dss == "KA21" ~ "Neonatal (other)",
-      mstrata_ac == "Neonatal (other)" & cod_c_dss == "KB21" ~ "Neonatal (birth asphyxia)",
-      mstrata_ac == "1-4 year (other)" & cod_c_dss == "PA91" ~ "1-4 year (drowning)",
+      !(rid_m %in% v_exceptions) & mstrata_ac == "Postneonatal (RI+con)" & cod_c_dss == "1G40" ~ "Postneonatal (other)",
+      !(rid_m %in% v_exceptions) & mstrata_ac == "Neonatal (birth asphyxia)" & cod_c_dss == "KA21" ~ "Neonatal (other)",
+      !(rid_m %in% v_exceptions) & mstrata_ac == "Neonatal (other)" & cod_c_dss == "KB21" ~ "Neonatal (birth asphyxia)",
+      !(rid_m %in% v_exceptions) & mstrata_ac == "1-4 year (other)" & cod_c_dss == "PA91" ~ "1-4 year (drowning)",
       TRUE ~ mstrata_ac
     )
   )
@@ -211,18 +247,19 @@ overall <- overall %>%
 # there are still some NAs
 overall %>%
   select(rid_m, mstrata_ac, cstrata_ac, cod_c_dss) %>%
-  filter(is.na(cstrata_ac)) %>% nrow # 512
+  filter(is.na(cstrata_ac)) %>% nrow # 524
 # sometimes these are cases where the validation study event did not match to the hdss, so we dont have cod information
 overall %>%
   select(type, rid_m, mstrata_ac, cstrata_ac, cod_c_dss) %>%
   filter(type == "VS_NoMatch" & is.na(cstrata_ac)) %>% nrow # 485
-# when it did match, there are 27 cases for which we still don't have the cod categorized
+# when it did match, there are 34 cases for which we still don't have the cod categorized
 # we have the cod from the hdss, but the categorized cod was not in the key 
 # (because the mother had multiple events and mother level strata couldn't be assigned to child)
+# (or because the cause was ill-defined and dropped from cod_key)
 overall %>%
   select(type, rid_m, mstrata_ac, cstatus_dss, cstatus_agesp_dss, cod_c_dss, cstrata_ac) %>%
   filter(type == "VS_Match" & is.na(cstrata_ac)) %>%
-  nrow() # 27
+  nrow() # 39
 
 # manual review of codes (google code for icd 10) and age at death
 # overall %>%
@@ -265,12 +302,15 @@ overall <- overall %>%
 overall %>%
   select(type, rid_m, mstrata_ac, cstatus_dss, cstatus_agesp_dss, cod_c_dss, cstrata_ac) %>%
   filter(type == "VS_Match" & is.na(cstrata_ac)) %>%
-  nrow() # 1
-# has a missing cod
+  nrow() # 13
+overall %>%
+  select(type, rid_m, mstrata_ac, cstatus_dss, cstatus_agesp_dss, cod_c_dss, cstrata_ac) %>%
+  filter(type == "VS_Match" & is.na(cstrata_ac))
+# one has a missing cod, and the others have ill-defined cods (R99, MH14)
 overall %>%
   filter(is.na(cstrata_ac)) %>% 
   group_by(type) %>%
-  summarise(n = n()) # 1 among matched cases, 485 among non-matches
+  summarise(n = n()) # 13 among matched cases, 485 among non-matches
 overall <- overall %>%
   select(-flag)
 
@@ -283,12 +323,9 @@ nrow(hdss_nomatch) # 607
 
 # add mother-level strata to these hdss records from the overall file
 hdss_nomatch <- hdss_nomatch %>%
-  left_join(overall %>% select(rid_m, mstrata_ac) %>% distinct())
-# mstrata_ac is missing for one woman
-nrow(subset(hdss_nomatch, is.na(mstrata_ac))) # 1
-# we don't know what mstrata_ac she was supposed to be because her birth did not match to the hdss
-# thus it is not in the overall file where the mstrata_ac variable is
-nrow(subset(overall, rid_m %in% subset(hdss_nomatch, is.na(mstrata_ac))$rid_m)) # 0
+  left_join(survey %>% select(rid_m, mstrata_ac) %>% distinct())
+# mstrata_ac is not missing for anyone 
+nrow(subset(hdss_nomatch, is.na(mstrata_ac))) # 0
 
 # add type variable
 hdss_nomatch$type <- "HDSS_NoMatch"
@@ -301,6 +338,7 @@ hdss_nomatch <- hdss_nomatch %>%
   left_join(cod_key, by = c("cstatus_agesp_dss", "cod_c_dss"))
 
 # fill in strata for miscarriage, abortion, stb, surviving, 5-9 year, 10+
+# can't do for neo, pneo, 1-4, because these have cause strata; so need to take that into account
 hdss_nomatch <- hdss_nomatch %>% 
   #select(uid_c_dss, cstatus_dss, cstatus_agesp_dss, cod_c_dss, cstrata_ac) %>%
   #filter(is.na(cstrata_ac)) %>%
@@ -309,7 +347,6 @@ hdss_nomatch <- hdss_nomatch %>%
     is.na(cstrata_ac) & cstatus_agesp_dss == "Miscarriage" ~ "Miscarriage",
     is.na(cstrata_ac) & cstatus_agesp_dss == "Surviving" ~ "Surviving",
     is.na(cstrata_ac) & cstatus_agesp_dss == "Stillbirth" ~ "Stillbirth",
-    is.na(cstrata_ac) & cstatus_agesp_dss == "1-4" ~ "1-4 year",
     is.na(cstrata_ac) & cstatus_agesp_dss == "5-9" ~ "5-9 year",
     is.na(cstrata_ac) & cstatus_agesp_dss == "10+" ~ "10+",
     TRUE ~ cstrata_ac
@@ -318,7 +355,7 @@ hdss_nomatch <- hdss_nomatch %>%
 # there are still some NAs
 hdss_nomatch %>%
   select(rid_m, cstatus_dss, cstatus_agesp_dss, cod_c_dss, cstrata_ac) %>%
-  filter(is.na(cstrata_ac)) %>% nrow() # 23
+  filter(is.na(cstrata_ac)) %>% nrow() # 28
 
 # if the HDSS COD is non-missing, categorize cod group based on cod_key
 v_n_ba <- subset(cod_key, cstrata_ac == "Neonatal (birth asphyxia)")$cod_c_dss
@@ -358,11 +395,14 @@ hdss_nomatch <- hdss_nomatch %>%
 
 # unknown child-level cod
 hdss_nomatch %>%
-  filter(is.na(cstrata_ac)) %>% nrow() # 1
+  filter(is.na(cstrata_ac)) %>% nrow() # 6
 hdss_nomatch %>%
   filter(is.na(cstrata_ac)) %>%
-  select(uid_c_dss, cstatus_dss, cstatus_agesp_dss, cod_c_dss, cstrata_ac) 
-# R99 is unknown COD
+  select(mstrata_ac, uid_c_dss, cstatus_dss, cstatus_agesp_dss, cod_c_dss, cstrata_ac) 
+hdss_nomatch %>%
+  filter(cod_c_dss %in% c("R99", "MH14")) %>%
+  select(mstrata_ac, uid_c_dss, cstatus_dss, cstatus_agesp_dss, cod_c_dss, cstrata_ac) 
+# MH14 and R99 are ill-defined CODs
 
 # Combine overall and hdss_nomatch         
 overall_aug1 <- bind_rows(overall, hdss_nomatch)
@@ -375,7 +415,7 @@ overall_aug1 <- bind_rows(overall, hdss_nomatch)
 # ie, look at all the women's matched and unmatched events and see if the mstrata could only apply to one
 overall_aug1 %>%
   filter(type %in% c("VS_Match", "HDSS_NoMatch")) %>% 
-  filter(!is.na(mstrata_ac) & is.na(cstrata_ac)) %>% nrow() # 2
+  filter(!is.na(mstrata_ac) & is.na(cstrata_ac)) %>% nrow() # 19
 overall_aug1 %>%
   filter(type %in% c("VS_Match", "HDSS_NoMatch")) %>% 
   select(type, rid_m, mstrata_ac, cstatus_dss, cod_c_dss, cstrata_ac) %>%
@@ -387,33 +427,48 @@ v_mothers_id <- overall_aug1 %>%
   filter(!is.na(mstrata_ac) & is.na(cstrata_ac)) %>% pull(rid_m)
 # check if the mstrata could only be applied to one event
 overall_aug1$recnr <- 1:nrow(overall_aug1)
+# subset deaths for mother
+# recode cstrata_ac if there is only one death for the given mother
+# but not if that death has an ill-defined cause or is missing
 cod_fill <- overall_aug1 %>%
   filter(rid_m %in% v_mothers_id & is.na(cstrata_ac) & cstatus_dss == "Died") %>%
   group_by(rid_m, cstatus_dss) %>%
   mutate(n = n()) %>%
   #select(recnr, type, rid_m, mstrata_ac, cstatus_dss, cstatus_agesp_dss, cstrata_ac, cod_c_dss, n) %>%
   mutate(cstrata_ac = case_when(
-    is.na(cstrata_ac) & n == 1 & mstrata_ac %in% c("Neonatal (other)", "Neonatal (birth asphyxia") & cstatus_agesp_dss == "Neonatal"~
-      mstrata_ac,
-    is.na(cstrata_ac) & n == 1 & mstrata_ac %in% c("Postneonatal (other)", "Postneonatal (RI+con)") & cstatus_agesp_dss == "Postneonatal"~
-      mstrata_ac,
-    is.na(cstrata_ac) & n == 1 & mstrata_ac %in% c("1-4 year (other)", "1-4 year (drowning)") & cstatus_agesp_dss == "1-4"~
-      mstrata_ac,
+    is.na(cstrata_ac) & n == 1 & 
+      mstrata_ac %in% c("Neonatal (other)", "Neonatal (birth asphyxia") & 
+      cstatus_agesp_dss == "Neonatal" & !(cod_c_dss %in% c("R99", "MH14")) & !is.na(cod_c_dss) ~ mstrata_ac,
+    is.na(cstrata_ac) & n == 1 & 
+      mstrata_ac %in% c("Postneonatal (other)", "Postneonatal (RI+con)") & 
+      cstatus_agesp_dss == "Postneonatal" & !(cod_c_dss %in% c("R99", "MH14")) & !is.na(cod_c_dss) ~ mstrata_ac,
+    is.na(cstrata_ac) & n == 1 & 
+      mstrata_ac %in% c("1-4 year (other)", "1-4 year (drowning)") & 
+      cstatus_agesp_dss == "1-4" & !(cod_c_dss %in% c("R99", "MH14")) & !is.na(cod_c_dss) ~ mstrata_ac,
     TRUE ~ cstrata_ac
   )) %>%
   select(-n)
+nrow(cod_fill) # 19
+nrow(subset(cod_fill, !is.na(cstrata_ac))) # 0
+# none were able to be filled in
 overall_aug1 <- rbind(subset(overall_aug1, !(recnr %in% cod_fill$recnr)), cod_fill)
 nrow(overall_aug1) # 2994
 
-# now there are no longer any missing cstrata_ac
+# now there are still 19 missing cstrata_ac
 overall_aug1 %>%
   filter(type %in% c("VS_Match", "HDSS_NoMatch")) %>% 
-  filter(!is.na(mstrata_ac) & is.na(cstrata_ac)) %>% nrow() # 0
-# there only missing ones are for non-matched events from the validation study
+  filter(!is.na(mstrata_ac) & is.na(cstrata_ac)) %>% nrow() # 19
+# there missing ones are for non-matched events from the validation study (VS_NoMatch)
+# and missing ones for matched events that had ill-defined or missing COD (NA, R99, or MH14 COD) (VS_Match)
+# and missing ones for non-matched events from HDSS that had ill-defined or missing COD (NA, R99, or MH14 COD)
 overall_aug1 %>%
   filter(is.na(cstrata_ac)) %>% 
   group_by(type) %>%
-  summarise(n = n()) # 485 VS_NoMatch
+  summarise(n = n()) # 485 VS_NoMatch, 13 VS_Match, HDSS_NoMatch
+# all are R99 or MH14
+overall_aug1 %>%
+  filter(type == "HDSS_NoMatch" & is.na(cstrata_ac)) %>%
+  select(cstatus_dss, cod_c_dss)
 
 # unknown because is an addition from the validation study
 overall_aug1$cstrata_ac[is.na(overall_aug1$cstrata_ac)] <- "Unknown"
@@ -423,11 +478,14 @@ overall_aug1$cstrata_ac[is.na(overall_aug1$cstrata_ac)] <- "Unknown"
 # From the validation study
 # miscarriages for which no matching with hdss was attempted (VS - MSC)
 # abortions for which no matching with hdss was attempted (VS - AB)
-survey_nomatch <- subset(survey, !(serial %in% overall$serial))
-nrow(survey_nomatch) # 266
+#survey_nomatch <- subset(survey, !(serial %in% overall$serial))
+survey_nomatch <- subset(survey, !(uid_c_sur %in% overall$uid_c_sur))
+nrow(survey_nomatch) # 265
+table(survey_nomatch$c223, useNA = "always") # 215 msc, 50 ab
 survey_nomatch$type <- NA
 survey_nomatch$type[survey_nomatch$c223 == "Miscarriage"] <- "VS_MSC"
 survey_nomatch$type[survey_nomatch$c223 == "Abortion"] <- "VS_AB"
+# 0 NA
 table(survey_nomatch$type, useNA = "always")
 
 survey_nomatch$cstrata_ac <- NA

@@ -2,8 +2,9 @@
 #' @description analyse all records regardless of match status, aggegrate level, denominators A and B
 #' Assess:
 #' Aggregate agreement in total number of lb, abo, msc, stb, surv children, died children, agegrp of deaths
-#' I'm using the overallDate file instead of overallName, but it doesn't matter. 
-#' We do not take matching status into account and each file has been augmented to contain all records from survey and HDSS.
+#' I think it shouldn't matter to use the overallDate instead of overallDOB 
+#' since we are not taking match status into account and each file has been augmented to contain all records from survey and HDSS.
+#' Though I'm not totally sure, so let's just use overallDOB
 #' @return 
 ################################################################################
 #' Clear environment
@@ -17,7 +18,7 @@ library(viridis)
 library(officer)
 library(flextable)
 #' Inputs
-overall <- readRDS("./gen/augment/overallDate-recode.rds")
+overall <- readRDS("./gen/augment/overallDob-recode.rds")
 ################################################################################
 
 # Assign denominator: 
@@ -25,9 +26,18 @@ overall <- readRDS("./gen/augment/overallDate-recode.rds")
 # B - reproductive age residents (15+)
 dat <- overall %>%
   mutate(denomA = ifelse(dob_m_dss == doi_m_dss, 1, 0),
-         denomB = ifelse(as.numeric(doi_m_dss - dob_m_dss)/365.25 <= 15, 1, 0))
-table(dat$denomA, useNA = "always")
-table(dat$denomB, useNA = "always")
+         denomB = ifelse(as.numeric(doi_m_dss - dob_m_dss)/365.25 <= 15, 1, 0),
+         denomC = ifelse(
+           # mother's in-migration is more than 10 years ago, and
+           as.numeric(as.Date(max(unique(overall$int_date_sur))) - doi_m_dss)/365.25 >= 10 & 
+             # dss dob is within past 10 years or
+             (!is.na(dob_c_dss) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - dob_c_dss)/365.25 <= 10 | 
+                # unmatched validation study dob is within past 10 years
+                (is.na(dob_c_dss) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - c220)/365.25 <= 10)), 
+           1, 0))
+table(dat$denomA, useNA = "always") # 746 pregnancies of lifelong residents
+table(dat$denomB, useNA = "always") # 1012 pregnancies of 15+ residents
+table(dat$denomC, useNA = "always") # 1300 mother-pregnancies in past 10 years
 dat %>%
   select(rid_m, denomA) %>%
   distinct() %>%
@@ -38,84 +48,109 @@ dat %>%
   distinct() %>%
   group_by(denomB) %>%
   summarise(n = n()) # 280 reproductive age residents
-
+dat %>%
+  select(rid_m, denomC) %>%
+  distinct() %>%
+  group_by(denomC) %>%
+  summarise(n = n()) # 497 women with uniterrupted residency in past 10 years
 
 # Define function for agreement in total number of events -----------------
 
-fn_aggAgreement <- function(dat, outcome, plot = TRUE){
+dat %>%
+  filter(c223 %in% c("Live birth")) %>%
+  group_by(rid_m) %>%
+  summarise(n = n()) %>%
+  group_by(n) %>%
+  summarise(n = n())
+
+fn_aggAgreement <- function(dat, outcome, denom, plot = TRUE){
+  
+  denom_col <- paste0("denom", denom) 
   
   if(outcome %in% c("Live birth", "Stillbirth")){
     n_sur <- dat %>%
-      filter(type %in% c("VS_Match", "VS_NoMatch") &
-               c223 == outcome) %>%
-      group_by(rid_m, denomA, denomB) %>%
+      filter(type %in% c("VS_Match", "VS_NoMatch", "VS_STB") &
+               c223 == outcome &
+               .data[[denom_col]] == 1) %>%
+      group_by(rid_m) %>%
       summarise(n = n())
     n_dss <- dat %>%
-      filter(type %in% c("VS_Match", "HDSS_NoMatch") &
-               pregout_dss == outcome) %>%
-      group_by(rid_m, denomA, denomB) %>%
+      filter(type %in% c("VS_Match", "HDSS_NoMatch", "HDSS_STB") &
+               pregout_dss == outcome &
+               .data[[denom_col]] == 1) %>%
+      group_by(rid_m) %>%
       summarise(n = n())
   }
 
   if(outcome == "Abortion"){
     n_sur <- dat %>%
       filter(type %in% c("VS_AB") &
-               c223 == outcome) %>%
-      group_by(rid_m, denomA, denomB) %>%
+               c223 == outcome &
+               .data[[denom_col]] == 1) %>%
+      group_by(rid_m) %>%
       summarise(n = n())
     n_dss <- dat %>%
       filter(type %in% c("HDSS_AB") &
-               pregout_dss == outcome) %>%
-      group_by(rid_m, denomA, denomB) %>%
+               pregout_dss == outcome &
+               .data[[denom_col]] == 1) %>%
+      group_by(rid_m) %>%
       summarise(n = n())
   }
   if(outcome == "Miscarriage"){
     n_sur <- dat %>%
       filter(type %in% c("VS_MSC") &
-               c223 == outcome) %>%
-      group_by(rid_m, denomA, denomB) %>%
+               c223 == outcome &
+               .data[[denom_col]] == 1) %>%
+      group_by(rid_m) %>%
       summarise(n = n()) 
     n_dss <- dat %>%
       filter(type %in% c("HDSS_MSC") &
-               pregout_dss == outcome) %>%
-      group_by(rid_m, denomA, denomB) %>%
+               pregout_dss == outcome &
+               .data[[denom_col]] == 1) %>%
+      group_by(rid_m) %>%
       summarise(n = n())
   }
   if(outcome %in% c("Neonatal", "Postneonatal", "1-4", "5-9")){
     n_sur <- dat %>%
       filter(type %in% c("VS_Match", "VS_NoMatch") &
-               cstatus_agesp_sur == outcome) %>%
-      group_by(rid_m, denomA, denomB) %>%
+               cstatus_agesp_sur == outcome &
+               .data[[denom_col]] == 1) %>%
+      group_by(rid_m) %>%
       summarise(n = n())
     n_dss <- dat %>%
       filter(type %in% c("VS_Match", "HDSS_NoMatch") &
-               cstatus_agesp_dss == outcome) %>%
-      group_by(rid_m, denomA, denomB) %>%
+               cstatus_agesp_dss == outcome &
+               .data[[denom_col]] == 1) %>%
+      group_by(rid_m) %>%
       summarise(n = n())
   }
   if(outcome %in% c("Surviving", "Died")){
     n_sur <- dat %>%
       filter(type %in% c("VS_Match", "VS_NoMatch") &
-               cstatus_sur == outcome) %>%
-      group_by(rid_m, denomA, denomB) %>%
+               cstatus_sur == outcome &
+               .data[[denom_col]] == 1) %>%
+      group_by(rid_m) %>%
       summarise(n = n())
     n_dss <- dat %>%
       filter(type %in% c("VS_Match", "HDSS_NoMatch") &
-               cstatus_dss == outcome) %>%
-      group_by(rid_m, denomA, denomB) %>%
+               cstatus_dss == outcome &
+               .data[[denom_col]] == 1) %>%
+      group_by(rid_m) %>%
       summarise(n = n())
   }
   
   
   # individuals who do not have even in either source
-  n_zero <- dat %>% filter(!(rid_m %in% c(n_sur$rid_m, n_dss$rid_m))) %>%
-    select(rid_m, denomA, denomB) %>%
+  n_zero <- dat %>% 
+    filter(!(rid_m %in% c(n_sur$rid_m, n_dss$rid_m)) &
+             .data[[denom_col]] == 1) %>%
+    select(rid_m) %>%
     distinct() %>%
     mutate(n_sur = 0,
            n_dss = 0)
   
   nAll <- n_sur %>%
-    dplyr::full_join( n_dss,by = c("rid_m", "denomA", "denomB"),suffix = c("_sur", "_dss")) %>%
+    dplyr::full_join(n_dss,by = c("rid_m"),suffix = c("_sur", "_dss")) %>%
     bind_rows(n_zero)
   
   # # are there any that had no reported live births in one source and not other
@@ -135,8 +170,7 @@ fn_aggAgreement <- function(dat, outcome, plot = TRUE){
   # reshape long
   nAlllong <- nAll %>% 
     ungroup() %>%
-    filter(denomA == 1) %>% mutate(denom = "A") %>%
-    bind_rows(nAll %>% filter(denomB == 1) %>% mutate(denom = "B")) %>%
+    mutate(denom = denom) %>%
     select(rid_m, n_sur, n_dss, denom)
   
   # summarise for plot
@@ -155,7 +189,10 @@ fn_aggAgreement <- function(dat, outcome, plot = TRUE){
 
 # Plot agreement ----------------------------------------------------------
 
-plotDat <- fn_aggAgreement(dat, outcome = "Live birth")
+plotDat1 <- fn_aggAgreement(dat, outcome = "Live birth", denom = "A")
+#plotDat2 <- fn_aggAgreement(dat, outcome = "Live birth", denom = "B")
+plotDat2 <- fn_aggAgreement(dat, outcome = "Live birth", denom = "C")
+plotDat <- rbind(plotDat1, plotDat2)
 myplot <- plotDat %>%
   mutate(denom = ifelse(denom == "A", "A: Lifelong residents", "B: Residents since age 15y")) %>%
   ggplot() +
@@ -173,6 +210,7 @@ myplot <- plotDat %>%
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
     text = element_text(size = 10)
   )
+myplot
 ggsave("./gen/figures/agg-agree-LB.png", myplot, width = 4, height = 2.5, dpi = 500) # formerly 8 and 4
 
 plotDat <- fn_aggAgreement(dat, outcome = "Stillbirth")
@@ -364,13 +402,10 @@ ggsave("./gen/figures/agg-agree-died.png", myplot, width = 4, height = 2.5, dpi 
 
 fn_agreementTable <- function(dat, denom, outcome){
   
-  if(denom == "A"){
-    dat <- dat %>% filter(denomA == 1)
-  }
-  if(denom == "B"){
-    dat <- dat %>% filter(denomB == 1)
-  }
-  
+  denom_col <- paste0("denom", denom) 
+
+  dat <- dat %>% filter(.data[[denom_col]] == 1)
+
   dat <- dat %>%
     mutate(error = case_when(
       n_sur == n_dss ~ "Agree",
@@ -440,7 +475,7 @@ datTabAll$rank <- NULL
 ft <- flextable(datTabAll) %>%
   set_header_labels(values = c("Outcome", "N", "%", "N", "%", "N", "%")) %>%
   add_header_row(values = c(" ","Agree", "Omission", "Addition"), colwidths = c(1, 2, 2, 2)) %>%
-  set_caption(caption = "Agreement between HDSS and FPH in number of events for lifelong residents (n = 210)") %>%
+  set_caption(caption = "Mother-level agreement in total number of events reported in each source for lifelong residents (n = 210)") %>%
   fontsize(size = 9, part = "all") %>%
   font(fontname = "Times New Roman", part = "all") %>%
   autofit() %>%

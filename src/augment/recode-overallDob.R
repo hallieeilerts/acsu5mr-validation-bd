@@ -8,8 +8,9 @@ rm(list = ls())
 library(tidyr)
 library(dplyr)
 library(haven)
+library(lubridate)
 #' Inputs
-dat <- readRDS("./gen/augment/overallDate-aug.rds")
+dat <- readRDS("./gen/augment/overallDob-aug.rds")
 ################################################################################
 
 # Recode ------------------------------------------------------------------
@@ -46,7 +47,7 @@ dat %>%
   group_by(rid_m) %>%
   mutate(ndob_m = n()) %>%
   filter(ndob_m > 1) %>% nrow() # 0
-# 751 mothers have missing doi
+# 679 mothers have missing doi
 nrow(subset(dat, is.na(doi_m_dss))) # 0
 # there are never 2 different doi's per mother though
 dat %>%
@@ -82,10 +83,14 @@ dat <- dat %>%
   ungroup() %>%
   mutate(mage_int = as.numeric(int_date_sur - dob_m_dss)/365.25,
          magecat_int = cut(mage_int,
-                          breaks = seq(15,55, 5), 
-                          labels = c("15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", "50-55")))
+                           breaks = seq(15,55, 5), 
+                           labels = c("15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54")),
+         magecat2_int = cut(mage_int,
+                             breaks = c(15, seq(25, 45, 5), 55), 
+                             labels = c("15-24", "25-29", "30-34", "35-39", "40-44", "45+"))) 
 nrow(subset(dat, is.na(mage_int))) # 0
 nrow(subset(dat, is.na(magecat_int))) # 0
+nrow(subset(dat, is.na(magecat2_int))) # 0
 
 # Max parity dss
 df_parity <- dat %>%
@@ -98,6 +103,18 @@ dat <- dat %>%
   left_join(df_parity, by = "rid_m") %>%
   relocate(paritymax_dss, .after = parity_dss) %>%
   relocate(paritymaxcat_dss, .after = paritymax_dss)
+
+# Max parity sur
+df_parity <- dat %>%
+  group_by(rid_m) %>%
+  summarise(paritymax_sur = max(as.numeric(parity_sur), na.rm = TRUE)) %>%
+  mutate(paritymaxcat_sur = cut(paritymax_sur, breaks = c(0,1,2,3,10), labels = c("1","2","3", "4+")))
+nrow(subset(df_parity, is.na(paritymaxcat_sur))) # 1
+nrow(subset(df_parity, paritymax_sur == 0)) # 0
+dat <- dat %>%
+  left_join(df_parity, by = "rid_m") %>%
+  relocate(paritymax_sur, .after = parity_sur) %>%
+  relocate(paritymaxcat_sur, .after = paritymax_sur)
 
 # categorize b114: education level
 table(dat$b114, useNA = "always")
@@ -264,13 +281,39 @@ dat <- dat %>%
 
 # Create new --------------------------------------------------------------
 
-# combined pregnancy outcome date
-nrow(subset(dat, is.na(dob_c_dss))) # 751
-nrow(subset(dat, is.na(c220))) # 607
+# combined pregnancy outcome date (deferring to dss)
+nrow(subset(dat, is.na(dob_c_dss))) # 679
+nrow(subset(dat, is.na(c220))) # 536
 dat <- dat %>%
   mutate(dob_c_comb = dplyr::if_else(!is.na(dob_c_dss), dob_c_dss, c220)) %>%
   mutate(dob_c_comb = as.Date(dob_c_comb, format = "%d-%b-%Y"))
 nrow(subset(dat, is.na(dob_c_comb))) # 0
+
+# combined birth order (deferring to dss)
+dat <- dat %>%
+  mutate(birthorder_comb = coalesce(as.numeric(parity_dss), as.numeric(parity_sur))) %>%
+  mutate(birthorder_cat_comb = cut(birthorder_comb, breaks = c(0,1,2,3,100), labels = c("1","2","3", "4+")))
+  
+# combined parity max (deferring to dss)
+dat <- dat %>%
+  mutate(paritymax_comb = coalesce(paritymax_dss, paritymax_sur)) %>%
+  mutate(paritymaxcat_comb = cut(paritymax_comb, breaks = c(0,1,2,3,10), labels = c("1","2","3", "4+")))
+
+# combined cstatus (deferring to dss)
+dat <- dat %>%
+  mutate(cstatus_comb = coalesce(cstatus_dss, cstatus_sur))
+
+# combined cstatus_agep (deferring to dss)
+dat <- dat %>%
+  mutate(cstatus_agesp_comb = coalesce(cstatus_agesp_dss, cstatus_agesp_sur))
+
+# recency of birth (deferring to dss)
+dat <- dat %>%
+  mutate(birthrecency = year(int_date_sur) - year(dob_c_comb)) %>%
+  mutate(birthrecency_cat = cut(birthrecency, breaks = c(-1,4,9,14,100), 
+                                 labels = c("0-4","5-9", "10-14", "15+"))) 
+  #select(dob_c_comb, birth_recency, birth_recency_cat) %>% filter(birth_recency == 10)
+
 
 # create child strata for just age
 dat <- dat %>%
@@ -306,14 +349,14 @@ dat <- dat %>%
 
 # Check id vars -----------------------------------------------------------
 
-nrow(dat) # 3260
+nrow(dat) # 3185
 
 # mother_id
 length(unique(dat$rid_m)) # 848
 nrow(subset(dat, is.na(rid_m))) # 0
 
 # child id in dss
-length(unique(dat$rid_c)) # 2014
+length(unique(dat$rid_c)) # 2163
 
 # count from 1 to n in survey
 length(unique(dat$serial)) # 2649
@@ -327,7 +370,5 @@ length(unique(dat$uid_c_dss)) # 2506
 
 # Save output(s) ----------------------------------------------------------
 
-saveRDS(dat, "./gen/augment/overallDate-recode.rds")
-
-
+saveRDS(dat, "./gen/augment/overallDob-recode.rds")
 

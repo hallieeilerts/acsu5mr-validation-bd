@@ -100,6 +100,12 @@ unique(dat$dob_c_sur)[1:5]
 # it does have doo_c (date of out child) and coo_c (cause of death of child)
 # need to rename the doo_c to dod_c
 
+# what is the difference between match_n, match_level, and match_score
+unique(dat$match_n) # indicates whether the name matched. but this is dob matched file, so "name" wasn't used as a matching variable. it doesn't indicate whether the records were actually matched in this file.
+unique(dat$match_level) # some kind of score. unclear
+unique(dat$match_score) # 1 if matched, NA otherwise
+# all the match_n records were sometimes matched (1) and sometimes not (NA)
+table(dat$match_n, dat$match_score, useNA = "always")
 
 # Select variables --------------------------------------------------------
 
@@ -372,7 +378,7 @@ dat <- dat %>%
 
 # Fix incorrect matches for multiple births -------------------------------
 
-# This is done for overallDate (and not overallDob) because matches were only based off bday
+# This is done for overallDate because matches were only based off bday
 # So we have a couple of clearly incorrectly matched twins with different pregnancy outcomes
 # However it's important to keep in mind that overallDate is really only used to investigate 
 # misclassification of stb/nnd. so really only need to fix those mismatches.
@@ -466,6 +472,7 @@ twinscorrected <- twin1corrected %>%
 datnew <- rbind(df_other, twinscorrected)
 nrow(dat) == nrow(datnew) # TRUE
 datnew <- datnew[order(datnew$rid_m, datnew$dob_c_sur),]
+datnew$recnr <- NULL
 dat <- datnew
 
 # Rename variables with dss suffix ----------------------------------------
@@ -505,6 +512,11 @@ dat <- dat %>%
     mstrata_a = sample, # formerly mstrata_a
     mstrata_ac = sample2 # formerly mstrata_ac
   )
+
+# make sure mstrata_a and mstrata_ac apply to all records for the mother
+# in this file, the unmatched records don't have it even though they should
+nrow(subset(dat, is.na(mstrata_a))) # 0
+nrow(subset(dat, is.na(mstrata_ac))) # 0
 
 # Coalesce va
 # This is mother-level information on child COD

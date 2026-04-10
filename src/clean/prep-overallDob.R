@@ -133,6 +133,7 @@ dat %>%
 # number 3 (not matched) in match_n is 1 (only in survey) in match_n2
 # NA in match_n is 2 (only in dss) in match_n2
 head(subset(dat, is.na(match_n))[,c("match_n", "match_n2")])
+# to match overallDate, need to create a match_score variable that is 1 for match and NA for no match
 
 
 # Select variables --------------------------------------------------------
@@ -405,6 +406,167 @@ dat <- dat %>%
          dod_c = as.Date(dod_c, format = "%Y-%m-%d")
   )
 
+
+# Swap incorrect matches to same mother -----------------------------------
+
+# when survival status doesn't match
+dat %>%
+  filter(match_n %in% c("Fully:m", "Partially:m")) %>% # for hdss/survey matches
+  filter((c224 == "No" & is.na(dod_c)) | # survey says died and dss has no dod
+           (c224 == "Yes" & !is.na(dod_c)) ) %>% # survey says surviving and dss has dod
+  select(rid_m, name_c, sex_c, dob_c, po, dod_c, 
+       c215, c216, c218, c219, c220, c223, c224, c228, c228_aa, c228_bb, c228_cc) # c224 is "child is still alive?"
+# two children born to 1D93002840 have been swapped. correct these here.
+# there are three others. 
+# the one born to 3V11000917 has the same dob in each source.
+# the one born to 4V76021009 has a slightly different dob, but the name is the exact same.
+# the one born to 4W00036810 has dob that are 5 years different and the name is different. unmatch in section below
+
+dat <- dat %>%
+  mutate(recnr = 1:n())
+
+df_swap <- dat %>%
+  filter(match_n %in% c("Fully:m", "Partially:m")) %>% # for hdss/survey matches
+  filter(rid_m == "1D93002840" & 
+           (c224 == "No" & is.na(dod_c) | # survey says died and dss has no dod
+           c224 == "Yes" & !is.na(dod_c)))
+df_other <- subset(dat, !(recnr %in% df_swap$recnr))
+
+# swap the child-level survey information
+df_swap <- df_swap %>%
+  group_by(rid_m) %>%
+  mutate(minrecnr = min(recnr),
+         maxrecnr = max(recnr)) 
+# select all child-level variables, shift record number
+kid1 <- df_swap %>%
+  select(rid_m, recnr, minrecnr, maxrecnr,
+         #rid_c, uid_c_dss, parity, preg_res_dss, name_c_dss, sex_c_dss, dob_c_dss, doo_c_dss, coo_c_dss, va1, va2, va3, va4, va5, va6, va7,
+         uid_c_sur, c215, c216, c218, c217, c219, c220, c221, c221_a, c221_aa, c221_aaa, c223, c224, c225, c226, c228, c228_aa, c228_bb, c228_ccc,
+         c228_cc, c228_d, c228_B) %>%
+  filter(recnr == minrecnr) %>%
+  mutate(recnr = maxrecnr) %>% # recode as max
+  select(-c(minrecnr, maxrecnr))
+kid2 <- df_swap %>%
+  select(rid_m, recnr, minrecnr, maxrecnr,
+         #rid_c, uid_c_dss, parity, preg_res_dss, name_c_dss, sex_c_dss, dob_c_dss, doo_c_dss, coo_c_dss, va1, va2, va3, va4, va5, va6, va7,
+         uid_c_sur, c215, c216, c218, c217, c219, c220, c221, c221_a, c221_aa, c221_aaa, c223, c224, c225, c226, c228, c228_aa, c228_bb, c228_ccc,
+         c228_cc, c228_d, c228_B) %>%
+  filter(recnr == maxrecnr) %>%
+  mutate(recnr = minrecnr) %>% # recode as min
+  select(-c(minrecnr, maxrecnr))
+# merge on child-level variables for other kid
+kid1corrected <- df_swap %>%
+  filter(recnr == minrecnr) %>%
+  select(-c(uid_c_sur, c215, c216, c218, c217, c219, c220, c221, c221_a, c221_aa, c221_aaa, c223, c224, c225, c226, c228, c228_aa, c228_bb, 
+            c228_ccc,c228_cc, c228_d, c228_B)) %>%
+  left_join(kid2, by = c("recnr", "rid_m"))  
+kid2corrected <- df_swap %>%
+  filter(recnr == maxrecnr) %>%
+  select(-c(uid_c_sur, c215, c216, c218, c217, c219, c220, c221, c221_a, c221_aa, c221_aaa, c223, c224, c225, c226, c228, c228_aa, c228_bb, 
+            c228_ccc,c228_cc, c228_d, c228_B)) %>%
+  left_join(kid1, by = c("recnr", "rid_m"))  
+
+# check that we have swapped the names so now it is a better match
+df_swap %>%
+  select(rid_m, recnr, minrecnr, maxrecnr,
+         rid_c, uid_c_dss, po, name_c, sex_c, dob_c, dod_c, CCOD,
+         uid_c_sur, c215, c216, c218, c217, c219, c220, c221, c221_a, c221_aa, c221_aaa, c223, c224, c225, c226, c228, c228_aa, c228_bb, c228_ccc,
+         c228_cc, c228_d, c228_B)
+kid1corrected %>%
+  select(rid_m, recnr, minrecnr, maxrecnr,
+         rid_c, uid_c_dss, po, name_c, sex_c, dob_c, dod_c, CCOD,
+         uid_c_sur, c215, c216, c218, c217, c219, c220, c221, c221_a, c221_aa, c221_aaa, c223, c224, c225, c226, c228, c228_aa, c228_bb, c228_ccc,
+         c228_cc, c228_d, c228_B)
+
+kidscorrected <- kid1corrected %>%
+  bind_rows(kid2corrected) %>%
+  select(-c(minrecnr, maxrecnr))
+
+datnew <- rbind(df_other, kidscorrected)
+nrow(dat) == nrow(datnew) # TRUE
+datnew <- datnew[order(datnew$rid_m, datnew$c220),]
+datnew$recnr <- NULL
+dat <- datnew
+
+
+
+# Fix incorrect matches ---------------------------------------------------
+
+
+# when survival status doesn't match and dob is more than 4 years different
+dat %>%
+  filter(match_n %in% c("Fully:m", "Partially:m")) %>% # for hdss/survey matches
+  filter((c224 == "No" & is.na(dod_c)) | # survey says died and dss has no dod
+           (c224 == "Yes" & !is.na(dod_c)) ) %>% # survey says surviving and dss has dod
+  filter(abs(as.numeric(dob_c - c220)/365.25) >= 4) %>%
+  select(rid_m, uid_c_dss, name_c, sex_c, dob_c, po, dod_c, 
+         c215, c216, c218, c219, c220, c223, c224, c228, c228_aa, c228_bb, c228_cc) # c224 is "child is still alive?"
+# rid_m 4W00036810 uid_c_dss 1915+2 has dobs that are 5 years different and the name is different. unmatch
+
+# when dob is very different
+dat %>%
+  filter(match_n %in% c("Fully:m", "Partially:m")) %>% # for hdss/survey matches
+  filter(abs(as.numeric(dob_c - c220)/365.25) >= 4) %>% # more than 4 years different in dob
+  filter(!(!is.na(dod_c) & c224 == "No")) %>% # exclude those where both sources say individual died. be more lenient for those
+  select(match_n, rid_m, uid_c_dss, name_c, sex_c, dob_c, po, dod_c, 
+         c215, c216, c218, c219, c220, c223, c224, c228, c228_aa, c228_bb, c228_cc) # c224 is "child is still alive?"
+# three of these look like data entry errors in the FPH. the year of the dob is wrong, but the month/day are right.
+# rid_m 1F00011240, 2DX0011209, 2V02002630
+# and then two of these look like they could be different kids that should not have been matched
+# 4W00036810, 5V49009404
+# only unmatch the one where the survival status does not match (4W00036810)
+
+dat <- dat %>%
+  mutate(recnr = 1:n())
+
+df_unmatch <- dat %>%
+  filter(rid_m == "4W00036810" & is.na(dod_c) & c224 == "No")
+df_other <- subset(dat, !(recnr %in% df_unmatch$recnr))
+
+# variables that belong to both
+# "rid_m", "match_n2", "match_n", 
+# survey variables
+v_sur <- c("serial", "sample", "sample2",  "cid_m", 
+           "uid_c_sur",
+           "int_date", "str_tim", "end_tim", "x0", "x0_1", "x0_2",
+           "x0_3", "x1", "ifr", 
+           "a1","HH_size","asset_score" ,"asset_quintile" ,
+           "c215", "c216", "c218", "c217", "c219", "c220", "c221", "c221_a",
+           "c221_aa", "c221_aaa", "c223", "c224", "c225", "c226", "c228", "c228_aa",
+           "c228_bb", "c228_ccc", "c228_cc", "c228_d", "c228_B", "b110_a", "b110_b", "b111",
+           "b111_a", "b112", "b112_a", "self_hscore", "b113", "b113_a", "b113_b", "b114",
+           "b115", "b117", "b119", "b120", "b121", "b122", "b123", "b130",
+           "c244", "c244_a", "c244_a1", "c244_a_1", "c244_a2", "c244_a_2", "c244_a3", "c244_a_3",
+           "c244_a4", "c244_a_4", "c244_a5", "c244_a_5", "d1", "d2", "d3", "d4",
+           "d5", "d6", "d7", "d8", "d9", "d10", "d10_a", "d10_a1",
+           "d10_a2", "d10_a3", "d10_a4", "d10_a5", "d10_a6", "d10_a_1", "d10_a_2", "d11",
+           "d11_a", "d12", "d12_a", "d12_a1", "d12_a2", "d12_a3", "d12_a4", "d12_a_1",
+           "d13", "d13_a", "d14", "parity_n_sur", "recnr")
+# dss variables
+
+v_dss <- c("rid_c",
+           "uid_c_dss", 
+           "po", "name_c", "sex_c", "dob_c", "dod_c", "CCOD")
+# mother-level dss variables don't need to be recoded as NA
+# "name_m", "age", "dob_m", "coo_m", "doo_m", "age_out_m", "age_extraction_m", "mot_in_date", "mig_result", "f_intype", "parity_n_dss"
+
+# for unmatched hdss record, recode survey columns as NA
+df_unmatch_dss <- df_unmatch %>%
+  mutate(across(all_of(v_sur), ~NA))  %>%
+  mutate(match_n = NA, # this variable is NA for unmatched HDSS records
+         match_n2 = "Only in DSS")
+# for unmatched survey record, recode dss columns as NA, and recode match_n
+df_unmatch_sur <- df_unmatch %>%
+  mutate(across(all_of(v_dss), ~NA)) %>%
+  mutate(match_n = "Not matched",
+         match_n2 = "Only in survey")
+
+datnew <- rbind(df_other, df_unmatch_dss, df_unmatch_sur )
+nrow(dat) + 1 == nrow(datnew)  # TRUE
+datnew <- datnew[order(datnew$rid_m, datnew$c220),]
+datnew$recnr <- NULL
+dat <- datnew
+
 # Rename variables with dss suffix ----------------------------------------
 
 # Rename columns that actually came from the DSS to make that clear
@@ -445,7 +607,28 @@ dat <- dat %>%
     mstrata_ac = sample2 
   )
 
-# in overallDate i coalesce va to matke mstrata_c
+# make sure mstrata_a and mstrata_ac apply to all records for the mother
+# in this file, the unmatched records don't have it even though they should
+nrow(subset(dat, is.na(mstrata_a))) # 186
+nrow(subset(dat, is.na(mstrata_ac))) # 186
+key_mstrata <- dat %>% 
+  select(rid_m, mstrata_a, mstrata_ac) %>%
+  distinct() %>%
+  filter(!is.na(mstrata_a))
+dat <- dat %>%
+  select(-c(mstrata_a, mstrata_ac)) %>%
+  left_join(key_mstrata, by = "rid_m")
+nrow(subset(dat, is.na(mstrata_a))) # 1
+nrow(subset(dat, is.na(mstrata_ac))) # 1
+subset(dat, is.na(mstrata_a))$rid_m # "5D34010707"
+# I looked it up in the survey file in prep-survey, and this mother should be 
+# mstrata_a of Neonatal, and mstrata_ac of Neonatal (other)
+dat$mstrata_a[dat$rid_m == "5D34010707"] <- "Neonatal"
+dat$mstrata_ac[dat$rid_m == "5D34010707"] <- "Neonatal (other)"
+nrow(subset(dat, is.na(mstrata_a))) # 0
+nrow(subset(dat, is.na(mstrata_ac))) # 0
+
+# in overallDate i coalesce va to make mstrata_c
 # there are not va variables in this file, so will create from mstrata_ac
 # This is mother-level information on child COD
 dat <- dat %>%
@@ -453,7 +636,7 @@ dat <- dat %>%
     mstrata_ac == "Neonatal (other)" ~ "Other",
     mstrata_ac == "Stillbirth" ~ "Stillbirth",
     mstrata_ac == "Neonatal (birth asphyxia)" ~ "Birth Asphyxia",
-    mstrata_ac == "1-4 year (other)" ~ "",
+    mstrata_ac == "1-4 year (other)" ~ "Other",
     mstrata_ac == "Live birth" ~ NA,
     mstrata_ac == "2024all" ~ NA,
     mstrata_ac == "5-9 year" ~ "NoStrata",
@@ -463,6 +646,15 @@ dat <- dat %>%
     TRUE ~ NA
   ))
 # NoStrata, Birth Asphyxia, Other, RI+Congenital, Drowning 
+
+
+# Create new match variable -----------------------------------------------
+
+dat <- dat %>%
+  mutate(match_score = case_when(
+    match_n2 == "In both" ~ 1,
+    TRUE ~ NA
+  ))
 
 # Create new variables from dss -------------------------------------------
 
