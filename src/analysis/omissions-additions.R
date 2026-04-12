@@ -279,58 +279,7 @@ tabDthAgeLong <- tabDageA %>%
          total_dthAge = total,
          per_dthAge = per)
 
-
-# Wide table --------------------------------------------------------------
-
-# deaths
-tabDth
-tabDthAge
-
-tabAll <- tabLB %>% 
-  bind_rows(tabDth) %>%
-  left_join(tabDthAge, by = c("event", "denom")) %>%
-  mutate(cstatus2 = cstatus,
-         rank1 = ifelse(event == "Live birth", 1, 2),
-         rank2 = case_when(
-           denom == "A" ~ 1,
-           denom == "C" ~ 2,
-           denom == "D" ~ 3,
-           TRUE ~ NA),
-         cstatus = factor(cstatus, levels = c("Neonatal", "Postneonatal", "1-4", "5-9"))) %>%
-  arrange(rank1, rank2, cstatus) %>%
-  select(event, denom, n_Match, per_Match, 
-         n_Omission, per_Omission, cstatus, n_Omission_agesp, #per_Omission_agesp,
-         n_Addition, per_Addition, cstatus2, n_Addition_agesp,# per_Addition_agesp,
-         total, total_per) 
-  
-# create Word table
-ft <- flextable(tabAll) %>%
-  set_header_labels(values = c("Event", "Sample", "N", "%", "N", "%", 
-                               "Age group", "N", 
-                               "N", "%",
-                               "Age group", "N",
-                               "N", "%")) %>%
-  add_header_row(values = c(" ","Match", "Omission", "Addition", "Total"), colwidths = c(2, 2, 4, 4, 2)) %>%
-  set_caption(caption = "Number of omissions and additions in FPH of live births and deaths (by age) among (A) all pregnancies of lifelong residents, (C) pregnancies in previous 10 years for resident women, and (D) pregnancies in previous 5 years for resident women") %>%
-  merge_v(j = ~ event + denom + n_Match + per_Match + n_Omission + per_Omission + n_Addition + per_Addition +
-            total) %>%
-  fontsize(size = 9, part = "all") %>%
-  font(fontname = "Times New Roman", part = "all") %>%
-  autofit() %>%
-  align(align = "right", j = 2:ncol(tabAll), part = "all") %>%
-  align(align = "left", j = 1, part = "all")
-ft
-
-doc <- read_docx() %>%
-  body_add_par("Table 1", style = "heading 1") %>%
-  body_add_flextable(ft)
-
-output_path <- here::here("gen/figures", "table-event-omissionsAdditions.docx")
-print(doc, target = output_path)
-cat("Saved to:", output_path, "\n")
-
-
-# Long table --------------------------------------------------------------
+# Table --------------------------------------------------------------
 
 # create totals row
 tabLBtotal <- tabLBLong %>%
@@ -374,17 +323,20 @@ tabAllLong <- tabLBLong %>%
          n_lb, per_lb,
          n_dth, per_dth,
          cstatus,
-         n_dthAge, per_dthAge)  
+         n_dthAge, per_dthAge) %>%
+  filter(denom %in% c("A", "C")) %>%
+  mutate(denom = ifelse(denom == "A", "Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years")) %>%
+  mutate(denom = factor(denom, levels = c("Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years")))
 
 
 ft <- flextable(tabAllLong) %>%
   set_header_labels(values = c("Sample", "Match type", "N", "%", "N", "%",
                                "Age group", "N", "%")) %>%
   add_header_row(values = c(" ","Live birth", "Death"), colwidths = c(2, 2, 5)) %>%
-  set_caption(caption = "Number of omissions and additions in FPH of live births and deaths among (A) all pregnancies of lifelong residents, (C) pregnancies in previous 10 years for resident women, and (D) pregnancies in previous 5 years for resident women") %>%
+  set_caption(caption = "Match status of live births and deaths between DSS and FPH among pregnancies to women with uninterrupted residency in the DSS in the 10 years preceding the validation study interview") %>%
   merge_v(j = ~ denom + type + n_lb + per_lb + n_dth + per_dth) %>%
-  fontsize(size = 9, part = "all") %>%
-  font(fontname = "Times New Roman", part = "all") %>%
+  flextable::fontsize(size = 9, part = "all") %>%
+  flextable::font(fontname = "Times New Roman", part = "all") %>%
   autofit() %>%
   align(align = "right", j = 2:ncol(tabAllLong), part = "all") %>%
   align(align = "left", j = 1, part = "all")
@@ -394,7 +346,7 @@ doc <- read_docx() %>%
   body_add_par("Table 1", style = "heading 1") %>%
   body_add_flextable(ft)
 
-output_path <- here::here("gen/figures", "table-event-omissionsAdditions-long.docx")
+output_path <- here::here("gen/figures", "table-event-matches.docx")
 print(doc, target = output_path)
 cat("Saved to:", output_path, "\n")
 

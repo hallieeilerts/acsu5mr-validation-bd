@@ -13,6 +13,7 @@ rm(list = ls())
 library(tidyr)
 library(dplyr)
 library(ggplot2)
+library(ggpubr)
 library(lubridate)
 library(viridis)
 library(officer)
@@ -187,19 +188,19 @@ fn_aggAgreement <- function(dat, outcome, denom, plot = TRUE){
 
 }
 
-# Plot agreement ----------------------------------------------------------
+# Figure: mother-level agreement (tiles) ----------------------------------------------------------
 
 plotDat1 <- fn_aggAgreement(dat, outcome = "Live birth", denom = "A")
-#plotDat2 <- fn_aggAgreement(dat, outcome = "Live birth", denom = "B")
 plotDat2 <- fn_aggAgreement(dat, outcome = "Live birth", denom = "C")
 plotDat <- rbind(plotDat1, plotDat2)
-myplot <- plotDat %>%
-  mutate(denom = ifelse(denom == "A", "A: Lifelong residents", "B: Residents since age 15y")) %>%
+myplot1 <- plotDat %>%
+  mutate(denom = ifelse(denom == "A", "Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years")) %>%
+  mutate(denom = factor(denom, levels = c("Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years"))) %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
   geom_text(aes(x= n_sur, y = n_dss, label = n)) +
   facet_wrap(~denom) +
-  scale_fill_viridis_c(direction = -1, option = "plasma") +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 484), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = unique(plotDat$outcome), x = "FPH", y = "DSS") +
@@ -210,38 +211,20 @@ myplot <- plotDat %>%
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
     text = element_text(size = 10)
   )
-myplot
-ggsave("./gen/figures/agg-agree-LB.png", myplot, width = 4, height = 2.5, dpi = 500) # formerly 8 and 4
+myplot1
+#ggsave("./gen/figures/agg-agree-LB.png", myplot1, width = 4, height = 2.5, dpi = 500) # formerly 8 and 4
 
-plotDat <- fn_aggAgreement(dat, outcome = "Stillbirth")
-myplot <- plotDat %>%
-  mutate(denom = ifelse(denom == "A", "A: Lifelong residents", "B: Residents since age 15y")) %>%
+plotDat1 <- fn_aggAgreement(dat, outcome = "Stillbirth", denom = "A")
+plotDat2 <- fn_aggAgreement(dat, outcome = "Stillbirth", denom = "C")
+plotDat <- rbind(plotDat1, plotDat2)
+myplot2 <- plotDat %>%
+  mutate(denom = ifelse(denom == "A", "Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years")) %>%
+  mutate(denom = factor(denom, levels = c("Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years"))) %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
   geom_text(aes(x= n_sur, y = n_dss, label = n)) +
   facet_wrap(~denom) +
-  scale_fill_viridis_c(direction = -1, option = "plasma") +
-  scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
-  scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
-  labs(title = unique(plotDat$outcome), x = "FPH", y = "DSS") +
-  coord_cartesian(ylim = c(-0.3, 3.3), xlim = c(-0.3, 3.3)) +
-  theme_bw() +
-  theme(
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
-  )
-ggsave("./gen/figures/agg-agree-SB.png", myplot, width = 4, height = 2.5, dpi = 500)
-
-
-plotDat <- fn_aggAgreement(dat, outcome = "Miscarriage")
-myplot <- plotDat %>%
-  mutate(denom = ifelse(denom == "A", "A: Lifelong residents", "B: Residents since age 15y")) %>%
-  ggplot() +
-  geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
-  geom_text(aes(x= n_sur, y = n_dss, label = n)) +
-  facet_wrap(~denom) +
-  scale_fill_viridis_c(direction = -1, option = "plasma") +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 484), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = unique(plotDat$outcome), x = "FPH", y = "DSS") +
@@ -252,17 +235,19 @@ myplot <- plotDat %>%
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
     text = element_text(size = 10)
   )
-ggsave("./gen/figures/agg-agree-MSC.png", myplot, width = 4, height = 2.5, dpi = 500)
+#ggsave("./gen/figures/agg-agree-SB.png", myplot2, width = 4, height = 2.5, dpi = 500)
 
-
-plotDat <- fn_aggAgreement(dat, outcome = "Abortion")
-myplot <- plotDat %>%
-  mutate(denom = ifelse(denom == "A", "A: Lifelong residents", "B: Residents since age 15y")) %>%
+plotDat1 <- fn_aggAgreement(dat, outcome = "Miscarriage", denom = "A")
+plotDat2 <- fn_aggAgreement(dat, outcome = "Miscarriage", denom = "C")
+plotDat <- rbind(plotDat1, plotDat2)
+myplot3 <- plotDat %>%
+  mutate(denom = ifelse(denom == "A", "Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years")) %>%
+  mutate(denom = factor(denom, levels = c("Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years"))) %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
   geom_text(aes(x= n_sur, y = n_dss, label = n)) +
   facet_wrap(~denom) +
-  scale_fill_viridis_c(direction = -1, option = "plasma") +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 484), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = unique(plotDat$outcome), x = "FPH", y = "DSS") +
@@ -273,17 +258,42 @@ myplot <- plotDat %>%
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
     text = element_text(size = 10)
   )
-ggsave("./gen/figures/agg-agree-AB.png", myplot, width = 4, height = 2.5, dpi = 500)
+#ggsave("./gen/figures/agg-agree-MSC.png", myplot3, width = 4, height = 2.5, dpi = 500)
 
-
-plotDat <- fn_aggAgreement(dat, outcome = "Neonatal")
-myplot <- plotDat %>%
-  mutate(denom = ifelse(denom == "A", "A: Lifelong residents", "B: Residents since age 15y")) %>%
+plotDat1 <- fn_aggAgreement(dat, outcome = "Abortion", denom = "A")
+plotDat2 <- fn_aggAgreement(dat, outcome = "Abortion", denom = "C")
+plotDat <- rbind(plotDat1, plotDat2)
+myplot4 <- plotDat %>%
+  mutate(denom = ifelse(denom == "A", "Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years")) %>%
+  mutate(denom = factor(denom, levels = c("Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years"))) %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
   geom_text(aes(x= n_sur, y = n_dss, label = n)) +
   facet_wrap(~denom) +
-  scale_fill_viridis_c(direction = -1, option = "plasma") +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 484), name = "N mothers") +
+  scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
+  scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
+  labs(title = unique(plotDat$outcome), x = "FPH", y = "DSS") +
+  coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
+  theme_bw() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_line(color = "black", linewidth = 0.3),
+    text = element_text(size = 10)
+  )
+#ggsave("./gen/figures/agg-agree-AB.png", myplot4, width = 4, height = 2.5, dpi = 500)
+
+plotDat1 <- fn_aggAgreement(dat, outcome = "Neonatal", denom = "A")
+plotDat2 <- fn_aggAgreement(dat, outcome = "Neonatal", denom = "C")
+plotDat <- rbind(plotDat1, plotDat2)
+myplot5 <- plotDat %>%
+  mutate(denom = ifelse(denom == "A", "Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years")) %>%
+  mutate(denom = factor(denom, levels = c("Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years"))) %>%
+  ggplot() +
+  geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
+  geom_text(aes(x= n_sur, y = n_dss, label = n)) +
+  facet_wrap(~denom) +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 484), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = "Neonatal death", x = "FPH", y = "DSS") +
@@ -294,16 +304,19 @@ myplot <- plotDat %>%
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
     text = element_text(size = 10)
   )
-ggsave("./gen/figures/agg-agree-Neonatal.png", myplot, width = 4, height = 2.5, dpi = 500)
+#ggsave("./gen/figures/agg-agree-Neonatal.png", myplot5, width = 4, height = 2.5, dpi = 500)
 
-plotDat <- fn_aggAgreement(dat, outcome = "Postneonatal")
-myplot <- plotDat %>%
-  mutate(denom = ifelse(denom == "A", "A: Lifelong residents", "B: Residents since age 15y")) %>%
+plotDat1 <- fn_aggAgreement(dat, outcome = "Postneonatal", denom = "A")
+plotDat2 <- fn_aggAgreement(dat, outcome = "Postneonatal", denom = "C")
+plotDat <- rbind(plotDat1, plotDat2)
+myplot6 <- plotDat %>%
+  mutate(denom = ifelse(denom == "A", "Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years")) %>%
+  mutate(denom = factor(denom, levels = c("Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years"))) %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
   geom_text(aes(x= n_sur, y = n_dss, label = n)) +
   facet_wrap(~denom) +
-  scale_fill_viridis_c(direction = -1, option = "plasma") +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 484), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = "Postneonatal death", x = "FPH", y = "DSS") +
@@ -314,16 +327,19 @@ myplot <- plotDat %>%
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
     text = element_text(size = 10)
   )
-ggsave("./gen/figures/agg-agree-Postneonatal.png", myplot, width = 4, height = 2.5, dpi = 500)
+#ggsave("./gen/figures/agg-agree-Postneonatal.png", myplot6, width = 4, height = 2.5, dpi = 500)
 
-plotDat <- fn_aggAgreement(dat, outcome = "1-4")
-myplot <- plotDat %>%
-  mutate(denom = ifelse(denom == "A", "A: Lifelong residents", "B: Residents since age 15y")) %>%
+plotDat1 <- fn_aggAgreement(dat, outcome = "1-4", denom = "A")
+plotDat2 <- fn_aggAgreement(dat, outcome = "1-4", denom = "C")
+plotDat <- rbind(plotDat1, plotDat2)
+myplot7 <- plotDat %>%
+  mutate(denom = ifelse(denom == "A", "Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years")) %>%
+  mutate(denom = factor(denom, levels = c("Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years"))) %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
   geom_text(aes(x= n_sur, y = n_dss, label = n)) +
   facet_wrap(~denom) +
-  scale_fill_viridis_c(direction = -1, option = "plasma") +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 484), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = "1-4y death", x = "FPH", y = "DSS") +
@@ -334,16 +350,19 @@ myplot <- plotDat %>%
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
     text = element_text(size = 10)
   )
-ggsave("./gen/figures/agg-agree-Child.png", myplot, width = 4, height = 2.5, dpi = 500)
+#ggsave("./gen/figures/agg-agree-Child.png", myplot7, width = 4, height = 2.5, dpi = 500)
 
-plotDat <- fn_aggAgreement(dat, outcome = "5-9")
-myplot <- plotDat %>%
-  mutate(denom = ifelse(denom == "A", "A: Lifelong residents", "B: Residents since age 15y")) %>%
+plotDat1 <- fn_aggAgreement(dat, outcome = "5-9", denom = "A")
+plotDat2 <- fn_aggAgreement(dat, outcome = "5-9", denom = "C")
+plotDat <- rbind(plotDat1, plotDat2)
+myplot8 <- plotDat %>%
+  mutate(denom = ifelse(denom == "A", "Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years")) %>%
+  mutate(denom = factor(denom, levels = c("Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years"))) %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
   geom_text(aes(x= n_sur, y = n_dss, label = n)) +
   facet_wrap(~denom) +
-  scale_fill_viridis_c(direction = -1, option = "plasma") +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 484), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = "5-9y death", x = "FPH", y = "DSS") +
@@ -354,17 +373,19 @@ myplot <- plotDat %>%
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
     text = element_text(size = 10)
   )
-ggsave("./gen/figures/agg-agree-OlderChild.png", myplot, width = 4, height = 2.5, dpi = 500)
+#ggsave("./gen/figures/agg-agree-OlderChild.png", myplot8, width = 4, height = 2.5, dpi = 500)
 
-
-plotDat <- fn_aggAgreement(dat, outcome = "Surviving")
-myplot <- plotDat %>%
-  mutate(denom = ifelse(denom == "A", "A: Lifelong residents", "B: Residents since age 15y")) %>%
+plotDat1 <- fn_aggAgreement(dat, outcome = "Surviving", denom = "A")
+plotDat2 <- fn_aggAgreement(dat, outcome = "Surviving", denom = "C")
+plotDat <- rbind(plotDat1, plotDat2)
+myplot9 <- plotDat %>%
+  mutate(denom = ifelse(denom == "A", "Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years")) %>%
+  mutate(denom = factor(denom, levels = c("Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years"))) %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
   geom_text(aes(x= n_sur, y = n_dss, label = n)) +
   facet_wrap(~denom) +
-  scale_fill_viridis_c(direction = -1, option = "plasma") +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 484), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = "Surviving children", x = "FPH", y = "DSS") +
@@ -375,16 +396,19 @@ myplot <- plotDat %>%
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
     text = element_text(size = 10)
   )
-ggsave("./gen/figures/agg-agree-surviving.png", myplot, width = 4, height = 2.5, dpi = 500)
+#ggsave("./gen/figures/agg-agree-surviving.png", myplot9, width = 4, height = 2.5, dpi = 500)
 
-plotDat <- fn_aggAgreement(dat, outcome = "Died")
-myplot <- plotDat %>%
-  mutate(denom = ifelse(denom == "A", "A: Lifelong residents", "B: Residents since age 15y")) %>%
+plotDat1 <- fn_aggAgreement(dat, outcome = "Died", denom = "A")
+plotDat2 <- fn_aggAgreement(dat, outcome = "Died", denom = "C")
+plotDat <- rbind(plotDat1, plotDat2)
+myplot10 <- plotDat %>%
+  mutate(denom = ifelse(denom == "A", "Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years")) %>%
+  mutate(denom = factor(denom, levels = c("Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years"))) %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
   geom_text(aes(x= n_sur, y = n_dss, label = n)) +
   facet_wrap(~denom) +
-  scale_fill_viridis_c(direction = -1, option = "plasma") +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 484), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = "Non-surviving children", x = "FPH", y = "DSS") +
@@ -395,17 +419,127 @@ myplot <- plotDat %>%
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
     text = element_text(size = 10)
   )
-ggsave("./gen/figures/agg-agree-died.png", myplot, width = 4, height = 2.5, dpi = 500)
+#ggsave("./gen/figures/agg-agree-died.png", myplot10, width = 4, height = 2.5, dpi = 500)
 
 
-# Table -------------------------------------------------------------------
+plots <- list(
+  myplot1, myplot2, myplot3, myplot4, myplot5,
+  myplot6, myplot7, myplot8, myplot9, myplot10
+)
+combined_plot <- ggarrange(
+  plotlist = plots,
+  ncol = 2, nrow = 5,
+  common.legend = TRUE,
+  legend = "bottom"
+)
+ggsave(
+  "./gen/figures/agg-agree-tiles.png",
+  plot = combined_plot,
+  width = 10,
+  height = 12,
+  dpi = 300
+)
 
+# Figure: total number of events --------------------------------------------------
+
+
+# define function to count events in each source
+fn_totaleventsTable <- function(dat, denom, outcome){
+  
+  dat <- dat %>%
+    summarise(n_sur = sum(n_sur),
+              n_dss = sum(n_dss)) %>%
+    mutate(outcome = outcome,
+           denom = denom)
+  
+  return(dat)
+  
+} 
+
+# preg outcomes
+datTab <- fn_aggAgreement(dat, outcome = "Live birth", denom = "A", plot = FALSE)
+datLB <- fn_totaleventsTable(datTab, denom = "A", outcome = "Live birth")
+datTab <- fn_aggAgreement(dat, outcome = "Stillbirth", denom = "A", plot = FALSE)
+datSB <- fn_totaleventsTable(datTab, denom = "A", outcome = "Stillbirth")
+datTab <- fn_aggAgreement(dat, outcome = "Miscarriage", denom = "A", plot = FALSE)
+datMSC <- fn_totaleventsTable(datTab, denom = "A", outcome = "Miscarriage")
+datTab <- fn_aggAgreement(dat, outcome = "Abortion", denom = "A", plot = FALSE)
+datAB <- fn_totaleventsTable(datTab, denom = "A", outcome = "Abortion")
+# deaths
+datTab <- fn_aggAgreement(dat, outcome = "Neonatal", denom = "A", plot = FALSE)
+datNeo <- fn_totaleventsTable(datTab, denom = "A", outcome = "Neonatal death")
+datTab <- fn_aggAgreement(dat, outcome = "Postneonatal", denom = "A", plot = FALSE)
+datPneo <- fn_totaleventsTable(datTab, denom = "A", outcome = "Postneonatal death")
+datTab <- fn_aggAgreement(dat, outcome = "1-4", denom = "A", plot = FALSE)
+datChild <- fn_totaleventsTable(datTab, denom = "A", outcome = "1-4y death")
+datTab <- fn_aggAgreement(dat, outcome = "5-9", denom = "A", plot = FALSE)
+datOlderchild <- fn_totaleventsTable(datTab, denom = "A", outcome = "5-9y death")
+# died/surviving
+datTab <- fn_aggAgreement(dat, outcome = "Surviving", denom = "A", plot = FALSE)
+datSurv <- fn_totaleventsTable(datTab, denom = "A", outcome = "Surviving children")
+datTab <- fn_aggAgreement(dat, outcome = "Died", denom = "A", plot = FALSE)
+datDied <- fn_totaleventsTable(datTab, denom = "A", outcome = "Non-surviving children")
+# combine
+datTabAllA <- rbind(datLB, datSB, datMSC, datAB,
+                   datNeo, datPneo, datChild, datOlderchild,
+                   datSurv, datDied)
+
+# preg outcomes
+datTab <- fn_aggAgreement(dat, outcome = "Live birth", denom = "C", plot = FALSE)
+datLB <- fn_totaleventsTable(datTab, denom = "C", outcome = "Live birth")
+datTab <- fn_aggAgreement(dat, outcome = "Stillbirth", denom = "C", plot = FALSE)
+datSB <- fn_totaleventsTable(datTab, denom = "C", outcome = "Stillbirth")
+datTab <- fn_aggAgreement(dat, outcome = "Miscarriage", denom = "C", plot = FALSE)
+datMSC <- fn_totaleventsTable(datTab, denom = "C", outcome = "Miscarriage")
+datTab <- fn_aggAgreement(dat, outcome = "Abortion", denom = "C", plot = FALSE)
+datAB <- fn_totaleventsTable(datTab, denom = "C", outcome = "Abortion")
+# deaths
+datTab <- fn_aggAgreement(dat, outcome = "Neonatal", denom = "C", plot = FALSE)
+datNeo <- fn_totaleventsTable(datTab, denom = "C", outcome = "Neonatal death")
+datTab <- fn_aggAgreement(dat, outcome = "Postneonatal", denom = "C", plot = FALSE)
+datPneo <- fn_totaleventsTable(datTab, denom = "C", outcome = "Postneonatal death")
+datTab <- fn_aggAgreement(dat, outcome = "1-4", denom = "C", plot = FALSE)
+datChild <- fn_totaleventsTable(datTab, denom = "C", outcome = "1-4y death")
+datTab <- fn_aggAgreement(dat, outcome = "5-9", denom = "C", plot = FALSE)
+datOlderchild <- fn_totaleventsTable(datTab, denom = "C", outcome = "5-9y death")
+# died/surviving
+datTab <- fn_aggAgreement(dat, outcome = "Surviving", denom = "C", plot = FALSE)
+datSurv <- fn_totaleventsTable(datTab, denom = "C", outcome = "Surviving children")
+datTab <- fn_aggAgreement(dat, outcome = "Died", denom = "C", plot = FALSE)
+datDied <- fn_totaleventsTable(datTab, denom = "C", outcome = "Non-surviving children")
+# combine
+datTabAllC <- rbind(datLB, datSB, datMSC, datAB,
+                    datNeo, datPneo, datChild, datOlderchild,
+                    datSurv, datDied)
+
+datTabAll <- rbind(datTabAllA, datTabAllC)
+
+myplot <- datTabAll %>%
+  mutate(denom = ifelse(denom == "A", "Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years")) %>%
+  mutate(denom = factor(denom, levels = c("Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years"))) %>%
+  pivot_longer(cols = c(n_sur, n_dss), names_to = "n") %>%
+  mutate(n = ifelse(n == "n_dss", "DSS", "FPH")) %>%
+  mutate(n = factor(n, levels = c("FPH", "DSS"))) %>%
+  mutate(outcome = factor(outcome, levels = rev(c("Live birth",
+       "Stillbirth","Miscarriage","Abortion","Neonatal death", "Postneonatal death",
+       "1-4y death","5-9y death","Surviving children", "Non-surviving children")))) %>%
+  ggplot() +
+  geom_bar(aes(x = outcome, y = value, fill = n), 
+           stat = "identity", position = "dodge") +
+  geom_text(aes(x = outcome, y = value, label = value, group = n),
+    position = position_dodge(width = 0.9), hjust = -0.1, size = 3) +
+  scale_fill_manual(values = scales::viridis_pal(option = "plasma")(4)[2:3], name = "",
+                    guide = guide_legend(reverse = TRUE)) +
+  labs(y = "N events", x = "") +
+  facet_wrap(~denom) +
+  coord_flip(ylim = c(0, 925))
+ggsave("./gen/figures/total-events-bysource.png", myplot, width = 8, height = 4, dpi = 500)
+
+# Table: mother-level agreement by event -----------------------------------------------
+
+# define function to create agreement in total number of events
 fn_agreementTable <- function(dat, denom, outcome){
   
-  denom_col <- paste0("denom", denom) 
-
-  dat <- dat %>% filter(.data[[denom_col]] == 1)
-
   dat <- dat %>%
     mutate(error = case_when(
       n_sur == n_dss ~ "Agree",
@@ -423,27 +557,27 @@ fn_agreementTable <- function(dat, denom, outcome){
   
 }
 
-datTab <- fn_aggAgreement(dat, outcome = "Live birth", plot = FALSE)
+datTab <- fn_aggAgreement(dat, outcome = "Live birth", denom = "A", plot = FALSE)
 datLB <- fn_agreementTable(datTab, denom = "A", outcome = "Live birth")
-datTab <- fn_aggAgreement(dat, outcome = "Stillbirth", plot = FALSE)
+datTab <- fn_aggAgreement(dat, outcome = "Stillbirth", denom = "A", plot = FALSE)
 datSB <- fn_agreementTable(datTab, denom = "A", outcome = "Stillbirth")
-datTab <- fn_aggAgreement(dat, outcome = "Miscarriage", plot = FALSE)
+datTab <- fn_aggAgreement(dat, outcome = "Miscarriage",  denom = "A", plot = FALSE)
 datMSC <- fn_agreementTable(datTab, denom = "A", outcome = "Miscarriage")
-datTab <- fn_aggAgreement(dat, outcome = "Abortion", plot = FALSE)
+datTab <- fn_aggAgreement(dat, outcome = "Abortion",  denom = "A", plot = FALSE)
 datAB <- fn_agreementTable(datTab, denom = "A", outcome = "Abortion")
 
-datTab <- fn_aggAgreement(dat, outcome = "Neonatal", plot = FALSE)
+datTab <- fn_aggAgreement(dat, outcome = "Neonatal",  denom = "A", plot = FALSE)
 datNeo <- fn_agreementTable(datTab, denom = "A", outcome = "Neonatal death")
-datTab <- fn_aggAgreement(dat, outcome = "Postneonatal", plot = FALSE)
+datTab <- fn_aggAgreement(dat, outcome = "Postneonatal",  denom = "A", plot = FALSE)
 datPneo <- fn_agreementTable(datTab, denom = "A", outcome = "Postneonatal death")
-datTab <- fn_aggAgreement(dat, outcome = "1-4", plot = FALSE)
+datTab <- fn_aggAgreement(dat, outcome = "1-4", denom = "A", plot = FALSE)
 datChild <- fn_agreementTable(datTab, denom = "A", outcome = "1-4y death")
-datTab <- fn_aggAgreement(dat, outcome = "5-9", plot = FALSE)
+datTab <- fn_aggAgreement(dat, outcome = "5-9", denom = "A", plot = FALSE)
 datOlderchild <- fn_agreementTable(datTab, denom = "A", outcome = "5-9y death")
 
-datTab <- fn_aggAgreement(dat, outcome = "Surviving", plot = FALSE)
+datTab <- fn_aggAgreement(dat, outcome = "Surviving", denom = "A", plot = FALSE)
 datSurv <- fn_agreementTable(datTab, denom = "A", outcome = "Surviving children")
-datTab <- fn_aggAgreement(dat, outcome = "Died", plot = FALSE)
+datTab <- fn_aggAgreement(dat, outcome = "Died", denom = "A", plot = FALSE)
 datDied <- fn_agreementTable(datTab, denom = "A", outcome = "Non-surviving children")
 
 datTabAll <- rbind(datLB, datSB, datMSC, datAB,
@@ -459,12 +593,12 @@ datTabAll <- datTabAll %>%
     outcome == "Stillbirth" ~ 2,
     outcome == "Miscarriage" ~ 3,
     outcome == "Abortion" ~ 4,
-    outcome == "Surviving children" ~ 5,
-    outcome == "Non-surviving children" ~ 6,
     outcome == "Neonatal death" ~ 7,
     outcome == "Postneonatal death" ~ 8,
     outcome == "1-4y death" ~ 9,
-    outcome == "5-9y death" ~ 10
+    outcome == "5-9y death" ~ 10,
+    outcome == "Surviving children" ~ 11,
+    outcome == "Non-surviving children" ~ 12,
   )) %>%
   arrange(rank)
 datTabAll$n_Addition[is.na(datTabAll$n_Addition)] <- 0
@@ -476,19 +610,20 @@ ft <- flextable(datTabAll) %>%
   set_header_labels(values = c("Outcome", "N", "%", "N", "%", "N", "%")) %>%
   add_header_row(values = c(" ","Agree", "Omission", "Addition"), colwidths = c(1, 2, 2, 2)) %>%
   set_caption(caption = "Mother-level agreement in total number of events reported in each source for lifelong residents (n = 210)") %>%
-  fontsize(size = 9, part = "all") %>%
-  font(fontname = "Times New Roman", part = "all") %>%
+  flextable::fontsize(size = 9, part = "all") %>%
+  flextable::font(fontname = "Times New Roman", part = "all") %>%
   autofit() %>%
   align(align = "right", j = 2:7, part = "all") %>%
   align(align = "left", j = 1, part = "all")
+ft
 
-doc <- read_docx() %>%
-  body_add_par("Table 1", style = "heading 1") %>%
-  body_add_flextable(ft)
-
-output_path <- here::here("gen/figures", "table-agg-agree.docx")
-print(doc, target = output_path)
-cat("Saved to:", output_path, "\n")
+# doc <- read_docx() %>%
+#   body_add_par("Table 1", style = "heading 1") %>%
+#   body_add_flextable(ft)
+# 
+# output_path <- here::here("gen/figures", "table-agg-agree.docx")
+# print(doc, target = output_path)
+# cat("Saved to:", output_path, "\n")
 
 # Note
 # I think not worth it to investigate the mother-level characteristics here...
@@ -565,8 +700,8 @@ datTabChi <- df_char_cat %>%
 ft <- flextable(datTabChi) %>%
   merge_v(j = ~ variable + p_value) %>%
   set_caption(caption = "Mother-level characteristics and chi-squared for agreement between HDSS and FPH in number of live births for lifelong residents (n = 210)") %>%
-  fontsize(size = 9, part = "all") %>%
-  font(fontname = "Times New Roman", part = "all") %>%
+  flextable::fontsize(size = 9, part = "all") %>%
+  flextable::font(fontname = "Times New Roman", part = "all") %>%
   autofit() %>%
   align(align = "right", j = 2:5, part = "all") %>%
   align(align = "left", j = 1, part = "all")
@@ -575,6 +710,6 @@ doc <- read_docx() %>%
   body_add_par("Table 2", style = "heading 1") %>%
   body_add_flextable(ft)
 
-output_path <- here::here("gen/figures", "table-agg-agree-lb-chi.docx")
-print(doc, target = output_path)
-cat("Saved to:", output_path, "\n")
+# output_path <- here::here("gen/figures", "table-agg-agree-lb-chi.docx")
+# print(doc, target = output_path)
+# cat("Saved to:", output_path, "\n")

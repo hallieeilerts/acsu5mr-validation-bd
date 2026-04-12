@@ -23,16 +23,17 @@ source("./src/clean/prep-overallDob.R", local = new.env())
 # Create augmented files that include all records -------------------------
 
 source("./src/augment/augment-overallDate.R", local = new.env())
+source("./src/augment/augment-overallDob.R", local = new.env())
 source("./src/augment/recode-overallDate.R", local = new.env())
-
-# to do
-#source("./src/augment/augment-overallDob.R", local = new.env())
-#source("./src/augment/recode-overallDob.R", local = new.env())
+source("./src/augment/recode-overallDob.R", local = new.env())
 
 # Analysis ----------------------------------------------------------------
 
-source("./src/analysis/overall-agg-denomAB.R", local = new.env())
-source("./src/analysis/overallDate-event-denomE.R", local = new.env())
+source("./src/analysis/aggregate-agreement.R", local = new.env())
+source("./src/analysis/misclassificatin-stb-lb.R", local = new.env())
+source("./src/analysis/omissions-additions.R", local = new.env())
+source("./src/analysis/omissions-additions-char.R", local = new.env())
+#source("./src/analysis/age-date-displacement.R", local = new.env())
 
 
 # Other -------------------------------------------------------------------

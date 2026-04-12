@@ -202,9 +202,9 @@ doc <- read_docx() %>%
   body_add_par("Table 1", style = "heading 1") %>%
   body_add_flextable(ft)
 
-output_path <- here::here("gen/figures", "table-lb-omissionsAdditions-char.docx")
-print(doc, target = output_path)
-cat("Saved to:", output_path, "\n")
+# output_path <- here::here("gen/figures", "table-lb-matchType-char.docx")
+# print(doc, target = output_path)
+# cat("Saved to:", output_path, "\n")
 
 
 # Descriptive table: omission/addition of deaths ----------------------------------------
@@ -368,7 +368,7 @@ doc <- read_docx() %>%
   body_add_par("Table 1", style = "heading 1") %>%
   body_add_flextable(ft)
 
-output_path <- here::here("gen/figures", "table-dths-omissionsAdditions-char.docx")
+output_path <- here::here("gen/figures", "table-dths-matchType-char.docx")
 print(doc, target = output_path)
 cat("Saved to:", output_path, "\n")
 
