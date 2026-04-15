@@ -424,10 +424,29 @@ overall_aug1 %>%
   filter(is.na(cstrata_ac)) %>% 
   group_by(type) %>%
   summarise(n = n()) # 254 VS_NoMatch, 18 VS_Match, 5 HDSS_NoMatch
+nrow(subset(overall_aug1, is.na(cstrata_ac))) # 277
 
-# unknown because is an addition from the validation study
-# label child strata as unknown for any missings
-overall_aug1$cstrata_ac[is.na(overall_aug1$cstrata_ac)] <- "Unknown"
+# addition from the validation study will have unknown COD always
+# missing CODs in dss will be unknown
+# if fph, specify as unknown because we just don't have the VA
+# if dss, recode these as (other) category for the respective age group
+#overall_aug1$cstrata_ac[is.na(overall_aug1$cstrata_ac)] <- "Unknown"
+overall_aug1 <- overall_aug1 %>%
+  mutate(cstrata_ac = case_when(
+    is.na(cstrata_ac) & type == "VS_NoMatch" & cstatus_agesp_sur == "Surviving" ~ "Surviving",
+    is.na(cstrata_ac) & type == "VS_NoMatch" & cstatus_agesp_sur == "Neonatal" ~ "Neonatal (unknown)",
+    is.na(cstrata_ac) & type == "VS_NoMatch" & cstatus_agesp_sur == "Postneonatal" ~ "Postneonatal (unknown)",
+    is.na(cstrata_ac) & type == "VS_NoMatch" & cstatus_agesp_sur == "1-4" ~ "1-4 year (unknown)",
+    is.na(cstrata_ac) & type == "VS_NoMatch" & cstatus_agesp_sur == "5-9" ~ "5-9 year",
+    is.na(cstrata_ac) & type == "VS_NoMatch" & cstatus_agesp_sur == "10+" ~ "10+",
+    is.na(cstrata_ac) & type %in% c("VS_Match", "HDSS_NoMatch") & cstatus_agesp_dss == "Neonatal" ~ "Neonatal (other)",
+    is.na(cstrata_ac) & type %in% c("VS_Match", "HDSS_NoMatch") & cstatus_agesp_dss == "Postneonatal" ~ "Postneonatal (other)",
+    is.na(cstrata_ac) & type %in% c("VS_Match", "HDSS_NoMatch") & cstatus_agesp_dss == "1-4" ~ "1-4 year (other)",
+    is.na(cstrata_ac) & type %in% c("VS_Match", "HDSS_NoMatch") & cstatus_agesp_dss == "5-9" ~ "5-9 year",
+    is.na(cstrata_ac) & type %in% c("VS_Match", "HDSS_NoMatch") & cstatus_agesp_dss == "10+" ~ "10+",
+    TRUE ~ cstrata_ac
+  ))
+nrow(subset(overall_aug1, is.na(cstrata_ac))) # 0
 
 # Add non-matching rows from VS -------------------------------------------
 

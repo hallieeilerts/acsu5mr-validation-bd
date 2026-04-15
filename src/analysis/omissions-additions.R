@@ -1,5 +1,5 @@
 ################################################################################
-#' @description analyse the overallDob file, event level, denominator A,C,D
+#' @description analyse matches/nonmatches at the event-level
 #' Assess:
 #' omissions/additions of live births, deaths
 #' @return 
@@ -13,35 +13,36 @@ library(haven)
 library(officer)
 library(flextable)
 #' Inputs
-dat <- readRDS("./gen/augment/overallDob-recode.rds")
+overall <- readRDS("./gen/augment/overallDob-recode.rds")
 ################################################################################
 
 # Assign denominator: 
 # A - Mothers: lifelong residents
 # C - Mother+pregnancies: 10 yr residents
 # D - Mother+pregnancies: 5 yr residents
-dat <- dat %>%
+# Since this is event level agreement, we use DSS as the reference standard.
+# DSS and FPH events are included conditional on the DSS DOB, and only FPH DOB if unmatched.
+# Hence there is no need for denomC_dss and denomC_sur columns. There is just one denomC.
+dat <- overall %>%
   mutate(denomA = ifelse(dob_m_dss == doi_m_dss, 1, 0),
          denomC = ifelse(
            # mother's in-migration is more than 10 years ago, and
-           as.numeric(as.Date(max(unique(dat$int_date_sur))) - doi_m_dss)/365.25 >= 10 & 
+           as.numeric(as.Date(max(unique(overall$int_date_sur))) - doi_m_dss)/365.25 >= 10 & 
              # dss dob is within past 10 years or
-              (!is.na(dob_c_dss) & as.numeric(as.Date(max(unique(dat$int_date_sur))) - dob_c_dss)/365.25 <= 10 | 
+              (!is.na(dob_c_dss) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - dob_c_dss)/365.25 <= 10 | 
                  # unmatched validation study dob is within past 10 years
-                  (is.na(dob_c_dss) & as.numeric(as.Date(max(unique(dat$int_date_sur))) - c220)/365.25 <= 10)), 
+                  (is.na(dob_c_dss) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - c220)/365.25 <= 10)), 
                          1, 0),
          denomD = ifelse(
            # mother's in-migration is more than 10 years ago
-           as.numeric(as.Date(max(unique(dat$int_date_sur))) - doi_m_dss)/365.25 >= 5 & 
+           as.numeric(as.Date(max(unique(overall$int_date_sur))) - doi_m_dss)/365.25 >= 5 & 
              # dss dob is within past 10 years
-              (!is.na(dob_c_dss) & as.numeric(as.Date(max(unique(dat$int_date_sur))) - dob_c_dss)/365.25 <= 5 | 
+              (!is.na(dob_c_dss) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - dob_c_dss)/365.25 <= 5 | 
                  # unmatched validation study dob is within past 10 years
-                  (is.na(dob_c_dss) & as.numeric(as.Date(max(unique(dat$int_date_sur))) - c220)/365.25 <= 5)), 
+                  (is.na(dob_c_dss) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - c220)/365.25 <= 5)), 
                          1, 0)
          )
-table(dat$denomA, useNA = "always") # 746 pregnancies of lifelong residents
-table(dat$denomC, useNA = "always") # 1300 mother-pregnancies in past 10 years
-table(dat$denomD, useNA = "always") # 1044 mother pregnancies in past 5 years
+
 dat %>%
   select(rid_m, denomA) %>%
   distinct() %>%
@@ -89,6 +90,12 @@ tabLBc <- dat %>%
   )) %>%
   select(type, n, per, total) %>%
   mutate(denom = "C")
+sum(subset(tabLBc, type %in% c("Omission", "Match"))$n)
+# ********809+66 = 875
+# this should equal the dss bar of live birth events in figure 1
+# in that figure, we were just totalling events in dss and fph in past ten years
+# in this exercise, we use dss as a reference standard. 
+# so the denomC is based off the dss DOB if available, and then fph dob's in the past 10 years otherwise.
 
 tabLBd <- dat %>%
   filter(denomD == 1 & (pregout_dss == "Live birth" | c223 == "Live birth")) %>%
@@ -173,6 +180,13 @@ tabDc <- dat %>%
   )) %>%
   select(type, n, per, total) %>%
   mutate(denom = "C")
+subset(tabDc, type %in% c("Omission", "Match"))$n
+sum(subset(tabDc, type %in% c("Omission", "Match"))$n)
+# ********25+328 = 363
+# this should equal the dss bar of non-surviving children in figure 1
+# in that figure, we were just totalling events in dss and fph in past ten years
+# in this exercise, we use dss as a reference standard. 
+# so the denomC is based off the dss DOB if available, and then fph dob's in the past 10 years otherwise.
 
 tabDd <- dat %>%
   filter(denomD == 1  & (pregout_dss == "Live birth" | c223 == "Live birth") &

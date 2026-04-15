@@ -307,13 +307,15 @@ dat <- dat %>%
 dat <- dat %>%
   mutate(cstatus_agesp_comb = coalesce(cstatus_agesp_dss, cstatus_agesp_sur))
 
-# recency of birth (deferring to dss)
+
+
 dat <- dat %>%
-  mutate(birthrecency = year(int_date_sur) - year(dob_c_comb)) %>%
+  mutate(birthrecency = as.numeric(as.Date(max(unique(dat$int_date_sur))) - dob_c_comb)/365.25,
+           #year(int_date_sur) - year(dob_c_comb)
+           ) %>%
   mutate(birthrecency_cat = cut(birthrecency, breaks = c(-1,4,9,14,100), 
                                  labels = c("0-4","5-9", "10-14", "15+"))) 
   #select(dob_c_comb, birth_recency, birth_recency_cat) %>% filter(birth_recency == 10)
-
 
 # create child strata for just age
 dat <- dat %>%

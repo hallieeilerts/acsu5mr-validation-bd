@@ -316,7 +316,7 @@ nrow(subset(dat, is.na(rid_m))) # 0
 length(unique(dat$rid_c)) # 2014
 
 # count from 1 to n in survey
-length(unique(dat$serial)) # 2649
+length(unique(dat$serial)) # 2648
 # serial per respondent
 length(unique(dat$serial1)) # 849
 

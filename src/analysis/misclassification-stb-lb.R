@@ -17,7 +17,7 @@ library(viridis)
 overallDate <- readRDS("./gen/augment/overallDate-recode.rds")
 ################################################################################
 
-# Denominator
+# Assign denominator
 # E - matched pregnancies only
 dat <- subset(overallDate, type == "VS_Match")
 

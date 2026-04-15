@@ -1,5 +1,5 @@
 ################################################################################
-#' @description analyse all records regardless of match status, aggegrate level, denominators A and B
+#' @description analyse all records regardless of match status, aggegrate level
 #' Assess:
 #' Aggregate agreement in total number of lb, abo, msc, stb, surv children, died children, agegrp of deaths
 #' I think it shouldn't matter to use the overallDate instead of overallDOB 
@@ -25,20 +25,27 @@ overall <- readRDS("./gen/augment/overallDob-recode.rds")
 # Assign denominator: 
 # A - lifelong residents
 # B - reproductive age residents (15+)
+# C - Mother+pregnancies: 10 yr residents
+# All - pregnancies or all women regardless of migration status. FPH should capture more.
+# Since this is aggregate agreement, DSS and FPH events are included conditional on their source-specific DOB.
+# Hence the need for denomC_dss and denomC_sur columns.
 dat <- overall %>%
   mutate(denomA = ifelse(dob_m_dss == doi_m_dss, 1, 0),
          denomB = ifelse(as.numeric(doi_m_dss - dob_m_dss)/365.25 <= 15, 1, 0),
-         denomC = ifelse(
+         denomC_dss = ifelse(
            # mother's in-migration is more than 10 years ago, and
            as.numeric(as.Date(max(unique(overall$int_date_sur))) - doi_m_dss)/365.25 >= 10 & 
-             # dss dob is within past 10 years or
-             (!is.na(dob_c_dss) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - dob_c_dss)/365.25 <= 10 | 
-                # unmatched validation study dob is within past 10 years
-                (is.na(dob_c_dss) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - c220)/365.25 <= 10)), 
-           1, 0))
-table(dat$denomA, useNA = "always") # 746 pregnancies of lifelong residents
-table(dat$denomB, useNA = "always") # 1012 pregnancies of 15+ residents
-table(dat$denomC, useNA = "always") # 1300 mother-pregnancies in past 10 years
+             # dss dob is within past 10 years
+             (!is.na(dob_c_dss) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - dob_c_dss)/365.25 <= 10), 
+           1, 0),
+         denomC_sur = ifelse(
+           # mother's in-migration is more than 10 years ago, and
+           as.numeric(as.Date(max(unique(overall$int_date_sur))) - doi_m_dss)/365.25 >= 10 & 
+                # validation study dob is within past 10 years
+                (!is.na(c220) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - c220)/365.25 <= 10), 
+           1, 0),
+         denomAll = 1) %>%
+  mutate(denomC = ifelse(denomC_dss == 1 | denomC_sur == 1, 1, 0))
 dat %>%
   select(rid_m, denomA) %>%
   distinct() %>%
@@ -55,6 +62,11 @@ dat %>%
   group_by(denomC) %>%
   summarise(n = n()) # 497 women with uniterrupted residency in past 10 years
 
+n_womAll <- length(unique(dat$rid_m))
+n_womA <- length(unique(subset(dat, denomA == 1)$rid_m))
+n_womB <- length(unique(subset(dat, denomB == 1)$rid_m))
+n_womC <- length(unique(subset(dat, denomC == 1)$rid_m))
+
 # Define function for agreement in total number of events -----------------
 
 dat %>%
@@ -68,80 +80,117 @@ fn_aggAgreement <- function(dat, outcome, denom, plot = TRUE){
   
   denom_col <- paste0("denom", denom) 
   
-  if(outcome %in% c("Live birth", "Stillbirth")){
-    n_sur <- dat %>%
-      filter(type %in% c("VS_Match", "VS_NoMatch", "VS_STB") &
-               c223 == outcome &
-               .data[[denom_col]] == 1) %>%
-      group_by(rid_m) %>%
-      summarise(n = n())
-    n_dss <- dat %>%
-      filter(type %in% c("VS_Match", "HDSS_NoMatch", "HDSS_STB") &
-               pregout_dss == outcome &
-               .data[[denom_col]] == 1) %>%
-      group_by(rid_m) %>%
-      summarise(n = n())
+  # women-level denominator
+  if(denom %in% c("A", "B", "All")){
+    if(outcome %in% c("Live birth", "Stillbirth", "Abortion", "Miscarriage")){
+      n_sur <- dat %>%
+        filter(c223 == outcome &
+                 .data[[denom_col]] == 1) %>%
+        group_by(rid_m) %>%
+        summarise(n = n())
+      n_dss <- dat %>%
+        filter(pregout_dss == outcome &
+                 .data[[denom_col]] == 1) %>%
+        group_by(rid_m) %>%
+        summarise(n = n())
+    }
+    if(outcome %in% c("Neonatal", "Postneonatal", "1-4", "5-9")){
+      n_sur <- dat %>%
+        filter(cstatus_agesp_sur == outcome &
+                 .data[[denom_col]] == 1) %>%
+        group_by(rid_m) %>%
+        summarise(n = n())
+      n_dss <- dat %>%
+        filter(cstatus_agesp_dss == outcome &
+                 .data[[denom_col]] == 1) %>%
+        group_by(rid_m) %>%
+        summarise(n = n())
+    }
+    if(outcome %in% c("Surviving", "Died")){
+      n_sur <- dat %>%
+        filter(cstatus_sur == outcome &
+                 .data[[denom_col]] == 1) %>%
+        group_by(rid_m) %>%
+        summarise(n = n())
+      n_dss <- dat %>%
+        filter(cstatus_dss == outcome &
+                 .data[[denom_col]] == 1) %>%
+        group_by(rid_m) %>%
+        summarise(n = n())
+    }
+    if(outcome %in% c("Pregnancy")){
+      n_sur <- dat %>%
+        filter(!is.na(cstatus_sur) &
+                 .data[[denom_col]] == 1) %>%
+        group_by(rid_m) %>%
+        summarise(n = n())
+      n_dss <- dat %>%
+        filter(!is.na(cstatus_dss) &
+                 .data[[denom_col]] == 1) %>%
+        group_by(rid_m) %>%
+        summarise(n = n())
+    }
   }
+  
+  # women+pregnancy level denominator
+  if(!(denom %in% c("A", "B", "All"))){
+    
+    denom_col_dss <- paste0(denom_col, "_dss") 
+    denom_col_sur <- paste0(denom_col, "_sur") 
+    
+    if(outcome %in% c("Live birth", "Stillbirth", "Abortion", "Miscarriage")){
+      n_sur <- dat %>%
+        filter(c223 == outcome &
+                 .data[[denom_col_sur]] == 1) %>%
+        group_by(rid_m) %>%
+        summarise(n = n())
+      n_dss <- dat %>%
+        filter(pregout_dss == outcome &
+                 .data[[denom_col_dss]] == 1) %>%
+        group_by(rid_m) %>%
+        summarise(n = n())
+    }
+    if(outcome %in% c("Neonatal", "Postneonatal", "1-4", "5-9")){
+      n_sur <- dat %>%
+        filter(cstatus_agesp_sur == outcome &
+                 .data[[denom_col_sur]] == 1) %>%
+        group_by(rid_m) %>%
+        summarise(n = n())
+      n_dss <- dat %>%
+        filter(cstatus_agesp_dss == outcome &
+                 .data[[denom_col_dss]] == 1) %>%
+        group_by(rid_m) %>%
+        summarise(n = n())
+    }
+    if(outcome %in% c("Surviving", "Died")){
+      n_sur <- dat %>%
+        filter(cstatus_sur == outcome &
+                 .data[[denom_col_sur]] == 1) %>%
+        group_by(rid_m) %>%
+        summarise(n = n())
+      n_dss <- dat %>%
+        filter(cstatus_dss == outcome &
+                 .data[[denom_col_dss]] == 1) %>%
+        group_by(rid_m) %>%
+        summarise(n = n())
+    }
+    if(outcome %in% c("Pregnancy")){
+      n_sur <- dat %>%
+        filter(!is.na(cstatus_sur) &
+                 .data[[denom_col_sur]] == 1) %>%
+        group_by(rid_m) %>%
+        summarise(n = n())
+      n_dss <- dat %>%
+        filter(!is.na(cstatus_dss) &
+                 .data[[denom_col_dss]] == 1) %>%
+        group_by(rid_m) %>%
+        summarise(n = n())
+    }
+  }
+  
 
-  if(outcome == "Abortion"){
-    n_sur <- dat %>%
-      filter(type %in% c("VS_AB") &
-               c223 == outcome &
-               .data[[denom_col]] == 1) %>%
-      group_by(rid_m) %>%
-      summarise(n = n())
-    n_dss <- dat %>%
-      filter(type %in% c("HDSS_AB") &
-               pregout_dss == outcome &
-               .data[[denom_col]] == 1) %>%
-      group_by(rid_m) %>%
-      summarise(n = n())
-  }
-  if(outcome == "Miscarriage"){
-    n_sur <- dat %>%
-      filter(type %in% c("VS_MSC") &
-               c223 == outcome &
-               .data[[denom_col]] == 1) %>%
-      group_by(rid_m) %>%
-      summarise(n = n()) 
-    n_dss <- dat %>%
-      filter(type %in% c("HDSS_MSC") &
-               pregout_dss == outcome &
-               .data[[denom_col]] == 1) %>%
-      group_by(rid_m) %>%
-      summarise(n = n())
-  }
-  if(outcome %in% c("Neonatal", "Postneonatal", "1-4", "5-9")){
-    n_sur <- dat %>%
-      filter(type %in% c("VS_Match", "VS_NoMatch") &
-               cstatus_agesp_sur == outcome &
-               .data[[denom_col]] == 1) %>%
-      group_by(rid_m) %>%
-      summarise(n = n())
-    n_dss <- dat %>%
-      filter(type %in% c("VS_Match", "HDSS_NoMatch") &
-               cstatus_agesp_dss == outcome &
-               .data[[denom_col]] == 1) %>%
-      group_by(rid_m) %>%
-      summarise(n = n())
-  }
-  if(outcome %in% c("Surviving", "Died")){
-    n_sur <- dat %>%
-      filter(type %in% c("VS_Match", "VS_NoMatch") &
-               cstatus_sur == outcome &
-               .data[[denom_col]] == 1) %>%
-      group_by(rid_m) %>%
-      summarise(n = n())
-    n_dss <- dat %>%
-      filter(type %in% c("VS_Match", "HDSS_NoMatch") &
-               cstatus_dss == outcome &
-               .data[[denom_col]] == 1) %>%
-      group_by(rid_m) %>%
-      summarise(n = n())
-  }
   
-  
-  # individuals who do not have even in either source
+  # individuals who do not have event in either source during the observation period
   n_zero <- dat %>% 
     filter(!(rid_m %in% c(n_sur$rid_m, n_dss$rid_m)) &
              .data[[denom_col]] == 1) %>%
@@ -149,6 +198,7 @@ fn_aggAgreement <- function(dat, outcome, denom, plot = TRUE){
     distinct() %>%
     mutate(n_sur = 0,
            n_dss = 0)
+  
   
   nAll <- n_sur %>%
     dplyr::full_join(n_dss,by = c("rid_m"),suffix = c("_sur", "_dss")) %>%
@@ -187,6 +237,33 @@ fn_aggAgreement <- function(dat, outcome, denom, plot = TRUE){
   }
 
 }
+
+
+
+# Women with disagreement -------------------------------------------------
+
+# investigate individual women with disagreement in n events between dss and sur
+
+df_n_sur <- dat %>%
+  filter(c223 == "Live birth" &
+           denomA == 1) %>%
+  group_by(rid_m) %>%
+  summarise(n_sur = n())
+df_n_dss <- dat %>%
+  filter(pregout_dss == "Live birth" &
+           denomA == 1) %>%
+  group_by(rid_m) %>%
+  summarise(n_dss = n())
+df_ind_agree <- df_n_sur %>% 
+  left_join(df_n_dss)
+
+# woman with 4 live births in survey and 2 in dss
+subset(df_ind_agree, n_sur == 4 & n_dss == 2)
+overall %>%
+  filter(rid_m == "3D93016009") %>% 
+  select(match_n, rid_m, cid_m, 
+         dob_m_dss, doi_m_dss, pregout_dss, name_c_dss, sex_c_dss, dob_c_dss, dod_c_dss, 
+         c215, c216, c218, c219, c220, c223)
 
 # Figure: mother-level agreement (tiles) ----------------------------------------------------------
 
@@ -424,14 +501,16 @@ myplot10 <- plotDat %>%
 
 plots <- list(
   myplot1, myplot2, myplot3, myplot4, myplot5,
-  myplot6, myplot7, myplot8, myplot9, myplot10
+  myplot6, myplot7, myplot8#, 
+  #myplot9, myplot10
 )
 combined_plot <- ggarrange(
   plotlist = plots,
-  ncol = 2, nrow = 5,
+  ncol = 2, nrow = 4,
   common.legend = TRUE,
   legend = "bottom"
 )
+combined_plot
 ggsave(
   "./gen/figures/agg-agree-tiles.png",
   plot = combined_plot,
@@ -456,7 +535,10 @@ fn_totaleventsTable <- function(dat, denom, outcome){
   
 } 
 
+# Lifelong residents
 # preg outcomes
+datTab <- fn_aggAgreement(dat, outcome = "Pregnancy", denom = "A", plot = FALSE)
+datPr <- fn_totaleventsTable(datTab, denom = "A", outcome = "Pregnancy")
 datTab <- fn_aggAgreement(dat, outcome = "Live birth", denom = "A", plot = FALSE)
 datLB <- fn_totaleventsTable(datTab, denom = "A", outcome = "Live birth")
 datTab <- fn_aggAgreement(dat, outcome = "Stillbirth", denom = "A", plot = FALSE)
@@ -480,11 +562,14 @@ datSurv <- fn_totaleventsTable(datTab, denom = "A", outcome = "Surviving childre
 datTab <- fn_aggAgreement(dat, outcome = "Died", denom = "A", plot = FALSE)
 datDied <- fn_totaleventsTable(datTab, denom = "A", outcome = "Non-surviving children")
 # combine
-datTabAllA <- rbind(datLB, datSB, datMSC, datAB,
+datTabAllA <- rbind(datPr, datLB, datSB, datMSC, datAB,
                    datNeo, datPneo, datChild, datOlderchild,
                    datSurv, datDied)
 
+# Pregnancies in past 10 years (only mothers with uninterrupted residency in that time)
 # preg outcomes
+datTab <- fn_aggAgreement(dat, outcome = "Pregnancy", denom = "C", plot = FALSE)
+datPr <- fn_totaleventsTable(datTab, denom = "C", outcome = "Pregnancy")
 datTab <- fn_aggAgreement(dat, outcome = "Live birth", denom = "C", plot = FALSE)
 datLB <- fn_totaleventsTable(datTab, denom = "C", outcome = "Live birth")
 datTab <- fn_aggAgreement(dat, outcome = "Stillbirth", denom = "C", plot = FALSE)
@@ -508,19 +593,90 @@ datSurv <- fn_totaleventsTable(datTab, denom = "C", outcome = "Surviving childre
 datTab <- fn_aggAgreement(dat, outcome = "Died", denom = "C", plot = FALSE)
 datDied <- fn_totaleventsTable(datTab, denom = "C", outcome = "Non-surviving children")
 # combine
-datTabAllC <- rbind(datLB, datSB, datMSC, datAB,
+datTabAllC <- rbind(datPr, datLB, datSB, datMSC, datAB,
                     datNeo, datPneo, datChild, datOlderchild,
                     datSurv, datDied)
 
-datTabAll <- rbind(datTabAllA, datTabAllC)
+# All mothers regardless of residency
+# preg outcomes
+datTab <- fn_aggAgreement(dat, outcome = "Pregnancy", denom = "All", plot = FALSE)
+datPr <- fn_totaleventsTable(datTab, denom = "All", outcome = "Pregnancy")
+datTab <- fn_aggAgreement(dat, outcome = "Live birth", denom = "All", plot = FALSE)
+datLB <- fn_totaleventsTable(datTab, denom = "All", outcome = "Live birth")
+datTab <- fn_aggAgreement(dat, outcome = "Stillbirth", denom = "All", plot = FALSE)
+datSB <- fn_totaleventsTable(datTab, denom = "All", outcome = "Stillbirth")
+datTab <- fn_aggAgreement(dat, outcome = "Miscarriage", denom = "All", plot = FALSE)
+datMSC <- fn_totaleventsTable(datTab, denom = "All", outcome = "Miscarriage")
+datTab <- fn_aggAgreement(dat, outcome = "Abortion", denom = "All", plot = FALSE)
+datAB <- fn_totaleventsTable(datTab, denom = "All", outcome = "Abortion")
+# deaths
+datTab <- fn_aggAgreement(dat, outcome = "Neonatal", denom = "All", plot = FALSE)
+datNeo <- fn_totaleventsTable(datTab, denom = "All", outcome = "Neonatal death")
+datTab <- fn_aggAgreement(dat, outcome = "Postneonatal", denom = "All", plot = FALSE)
+datPneo <- fn_totaleventsTable(datTab, denom = "All", outcome = "Postneonatal death")
+datTab <- fn_aggAgreement(dat, outcome = "1-4", denom = "All", plot = FALSE)
+datChild <- fn_totaleventsTable(datTab, denom = "All", outcome = "1-4y death")
+datTab <- fn_aggAgreement(dat, outcome = "5-9", denom = "All", plot = FALSE)
+datOlderchild <- fn_totaleventsTable(datTab, denom = "All", outcome = "5-9y death")
+# died/surviving
+datTab <- fn_aggAgreement(dat, outcome = "Surviving", denom = "All", plot = FALSE)
+datSurv <- fn_totaleventsTable(datTab, denom = "All", outcome = "Surviving children")
+datTab <- fn_aggAgreement(dat, outcome = "Died", denom = "All", plot = FALSE)
+datDied <- fn_totaleventsTable(datTab, denom = "All", outcome = "Non-surviving children")
+# combine
+datTabAllAll <- rbind(datPr, datLB, datSB, datMSC, datAB,
+                    datNeo, datPneo, datChild, datOlderchild,
+                    datSurv, datDied)
+
+datTabAll <- rbind(datTabAllA, datTabAllC, datTabAllAll)
+
 
 myplot <- datTabAll %>%
-  mutate(denom = ifelse(denom == "A", "Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years")) %>%
-  mutate(denom = factor(denom, levels = c("Mothers: lifelong residents", "Mother+pregnancies: prev. 10 years"))) %>%
+  filter(denom %in% c("A", "C")) %>%
+  mutate(denom = case_when(
+    denom == "A" ~ paste0("Pregnancies of lifelong residents (n women = ",n_womA, ")"), #"Mothers: lifelong residents",
+    denom == "C" ~ paste0("Pregnancies in prev. 10 years of resident women (n women = ", n_womC, ")"), #"Mother+pregnancies: prev. 10 years",
+    TRUE ~ denom
+  )) %>%
+  mutate(denom = factor(denom, levels = c( paste0("Pregnancies of lifelong residents (n women = ",n_womA, ")"), # "Mothers: lifelong residents"
+                                           paste0("Pregnancies in prev. 10 years of resident women (n women = ", n_womC, ")")))) %>% # "Mother+pregnancies: prev. 10 years
   pivot_longer(cols = c(n_sur, n_dss), names_to = "n") %>%
   mutate(n = ifelse(n == "n_dss", "DSS", "FPH")) %>%
   mutate(n = factor(n, levels = c("FPH", "DSS"))) %>%
-  mutate(outcome = factor(outcome, levels = rev(c("Live birth",
+  mutate(outcome = factor(outcome, levels = rev(c("Pregnancy",
+                                                  "Live birth",
+                                                  "Stillbirth","Miscarriage","Abortion","Neonatal death", "Postneonatal death",
+                                                  "1-4y death","5-9y death","Surviving children", "Non-surviving children")))) %>%
+  ggplot() +
+  geom_bar(aes(x = outcome, y = value, fill = n), 
+           stat = "identity", position = "dodge") +
+  geom_text(aes(x = outcome, y = value, label = value, group = n),
+            position = position_dodge(width = 0.9), hjust = -0.1, size = 3) +
+  scale_fill_manual(values = scales::viridis_pal(option = "plasma")(4)[2:3], name = "",
+                    guide = guide_legend(reverse = TRUE)) +
+  labs(y = "N events", x = "") +
+  facet_wrap(~denom, labeller = label_wrap_gen(40)) +
+  coord_flip(
+    ylim = c(0, 1200)
+  )
+myplot
+ggsave("./gen/figures/total-events-bysource.png", myplot, width = 8, height = 4, dpi = 500)
+
+myplot <- datTabAll %>%
+  filter(denom %in% c("A", "C", "All")) %>%
+  mutate(denom = case_when(
+    denom == "A" ~ paste0("Pregnancies of lifelong residents (n women = ",n_womA, ")"), #"Mothers: lifelong residents",
+    denom == "C" ~ paste0("Pregnancies in prev. 10 years of resident women (n women = ", n_womC, ")"), #"Mother+pregnancies: prev. 10 years",
+    denom == "All" ~ paste0("All pregnancies (n women = ", n_womAll, ")"), #"All",
+    TRUE ~ denom
+  )) %>%
+  mutate(denom = factor(denom, levels = c(paste0("All pregnancies (n women = ", n_womAll, ")"),
+                                          paste0("Pregnancies of lifelong residents (n women = ",n_womA, ")"), # "Mothers: lifelong residents"
+                                          paste0("Pregnancies in prev. 10 years of resident women (n women = ", n_womC, ")")))) %>% # "Mother+pregnancies: prev. 10 years
+  pivot_longer(cols = c(n_sur, n_dss), names_to = "n") %>%
+  mutate(n = ifelse(n == "n_dss", "DSS", "FPH")) %>%
+  mutate(n = factor(n, levels = c("FPH", "DSS"))) %>%
+  mutate(outcome = factor(outcome, levels = rev(c("Pregnancy","Live birth",
        "Stillbirth","Miscarriage","Abortion","Neonatal death", "Postneonatal death",
        "1-4y death","5-9y death","Surviving children", "Non-surviving children")))) %>%
   ggplot() +
@@ -531,9 +687,12 @@ myplot <- datTabAll %>%
   scale_fill_manual(values = scales::viridis_pal(option = "plasma")(4)[2:3], name = "",
                     guide = guide_legend(reverse = TRUE)) +
   labs(y = "N events", x = "") +
-  facet_wrap(~denom) +
-  coord_flip(ylim = c(0, 925))
-ggsave("./gen/figures/total-events-bysource.png", myplot, width = 8, height = 4, dpi = 500)
+  facet_wrap(~denom, labeller = label_wrap_gen(40)) +
+  coord_flip(
+    ylim = c(0, 2900)
+    )
+myplot
+ggsave("./gen/figures/total-events-bysource-all.png", myplot, width = 10, height = 4, dpi = 500)
 
 # Table: mother-level agreement by event -----------------------------------------------
 
