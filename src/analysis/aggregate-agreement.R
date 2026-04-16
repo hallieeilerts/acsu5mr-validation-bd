@@ -33,15 +33,15 @@ dat <- overall %>%
          denomB = ifelse(dob_m_dss == doi_m_dss, 1, 0),
          denomC_dss = ifelse(
            # mother's in-migration is more than 10 years ago, and
-           as.numeric(as.Date(max(unique(overall$int_date_sur))) - doi_m_dss)/365.25 >= 10 & 
+           as.numeric(as.Date(max(unique(overall$int_date_sur))) - doi_m_dss)/365.25 >= 15 & 
              # dss dob is within past 10 years
-             (!is.na(dob_c_dss) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - dob_c_dss)/365.25 <= 10), 
+             (!is.na(dob_c_dss) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - dob_c_dss)/365.25 <= 15), 
            1, 0),
          denomC_sur = ifelse(
            # mother's in-migration is more than 10 years ago, and
-           as.numeric(as.Date(max(unique(overall$int_date_sur))) - doi_m_dss)/365.25 >= 10 & 
+           as.numeric(as.Date(max(unique(overall$int_date_sur))) - doi_m_dss)/365.25 >= 15 & 
                 # validation study dob is within past 10 years
-                (!is.na(c220) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - c220)/365.25 <= 10), 
+                (!is.na(c220) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - c220)/365.25 <= 15), 
            1, 0)) %>%
   mutate(denomC = ifelse(denomC_dss == 1 | denomC_sur == 1, 1, 0))
 dat %>%
@@ -235,32 +235,6 @@ fn_aggAgreement <- function(dat, outcome, denom, plot = TRUE){
 
 }
 
-
-
-# Women with disagreement -------------------------------------------------
-
-# investigate individual women with disagreement in n events between dss and sur
-
-df_n_sur <- dat %>%
-  filter(c223 == "Live birth" &
-           denomB == 1) %>%
-  group_by(rid_m) %>%
-  summarise(n_sur = n())
-df_n_dss <- dat %>%
-  filter(pregout_dss == "Live birth" &
-           denomB == 1) %>%
-  group_by(rid_m) %>%
-  summarise(n_dss = n())
-df_ind_agree <- df_n_sur %>% 
-  left_join(df_n_dss)
-
-# woman with 4 live births in survey and 2 in dss
-subset(df_ind_agree, n_sur == 4 & n_dss == 2)
-overall %>%
-  filter(rid_m == "3D93016009") %>% 
-  select(match_n, rid_m, cid_m, 
-         dob_m_dss, doi_m_dss, pregout_dss, name_c_dss, sex_c_dss, dob_c_dss, dod_c_dss, 
-         c215, c216, c218, c219, c220, c223)
 
 
 
@@ -481,7 +455,7 @@ myplot1 <- plotDat %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
   geom_text(aes(x= n_sur, y = n_dss, label = n)) +
-  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), 5, by = 1)) +
   labs(title = unique(plotDat$outcome), x = "FPH", y = "DSS") +
@@ -500,7 +474,7 @@ myplot2 <- plotDat %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
   geom_text(aes(x= n_sur, y = n_dss, label = n)) +
-  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = unique(plotDat$outcome), x = "FPH", y = "DSS") +
@@ -518,11 +492,13 @@ myplot3 <- plotDat %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
   geom_text(aes(x= n_sur, y = n_dss, label = n)) +
-  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
-  scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
+  #scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
+  scale_y_continuous(breaks = seq(min(plotDat$n_dss), 7, by = 1)) +
   labs(title = unique(plotDat$outcome), x = "FPH", y = "DSS") +
-  coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
+  #coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
+  coord_cartesian(ylim = c(-0.1, 7.1), xlim = c(-0.1, 7.1)) +
   theme_bw() +
   theme(
     panel.grid.major = element_blank(),
@@ -536,7 +512,7 @@ myplot4 <- plotDat %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
   geom_text(aes(x= n_sur, y = n_dss, label = n)) +
-  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), 2, by = 1)) +
   labs(title = unique(plotDat$outcome), x = "FPH", y = "DSS") +
@@ -555,7 +531,7 @@ myplot5 <- plotDat %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
   geom_text(aes(x= n_sur, y = n_dss, label = n)) +
-  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = "Neonatal death", x = "FPH", y = "DSS") +
@@ -574,7 +550,7 @@ myplot6 <- plotDat %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
   geom_text(aes(x= n_sur, y = n_dss, label = n)) +
-  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = "Postneonatal death", x = "FPH", y = "DSS") +
@@ -592,7 +568,7 @@ myplot7 <- plotDat %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
   geom_text(aes(x= n_sur, y = n_dss, label = n)) +
-  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = "1-4y death", x = "FPH", y = "DSS") +
@@ -610,7 +586,7 @@ myplot8 <- plotDat %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
   geom_text(aes(x= n_sur, y = n_dss, label = n)) +
-  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = "5-9y death", x = "FPH", y = "DSS") +
@@ -628,11 +604,12 @@ myplot9 <- plotDat %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
   geom_text(aes(x= n_sur, y = n_dss, label = n)) +
-  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = "Surviving children", x = "FPH", y = "DSS") +
-  coord_cartesian(ylim = c(-0.1, 6.1), xlim = c(-0.1, 6.1)) +
+  #coord_cartesian(ylim = c(-0.1, 6.1), xlim = c(-0.1, 6.1)) +
+  coord_cartesian(ylim = c(-0.2, 4.2), xlim = c(-0.2, 4.2)) +
   theme_bw() +
   theme(
     panel.grid.major = element_blank(),
@@ -646,7 +623,7 @@ myplot10 <- plotDat %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
   geom_text(aes(x= n_sur, y = n_dss, label = n)) +
-  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
+  scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = "Non-surviving children", x = "FPH", y = "DSS") +
@@ -679,6 +656,55 @@ ggsave(
   height = 12,
   dpi = 300
 )
+
+# Women with disagreement -------------------------------------------------
+
+# investigate individual women with disagreement in n events between dss and sur
+
+df_n_sur <- dat %>%
+  filter(c223 == "Live birth" &
+           denomB == 1) %>%
+  group_by(rid_m) %>%
+  summarise(n_sur = n())
+df_n_dss <- dat %>%
+  filter(pregout_dss == "Live birth" &
+           denomB == 1) %>%
+  group_by(rid_m) %>%
+  summarise(n_dss = n())
+df_ind_agree <- df_n_sur %>% 
+  left_join(df_n_dss)
+# woman with 4 live births in survey and 2 in dss
+subset(df_ind_agree, n_sur == 4 & n_dss == 2)
+overall %>%
+  filter(rid_m == "3D93016009") %>% 
+  select(match_n, rid_m, cid_m, 
+         dob_m_dss, doi_m_dss, pregout_dss, name_c_dss, sex_c_dss, dob_c_dss, dod_c_dss, 
+         c215, c216, c218, c219, c220, c223)
+
+
+df_n_sur <- dat %>%
+  filter(c223 == "Miscarriage" &
+           denomC == 1) %>%
+  group_by(rid_m) %>%
+  summarise(n_sur = n())
+df_n_dss <- dat %>%
+  filter(pregout_dss == "Miscarriage" &
+           denomC == 1) %>%
+  group_by(rid_m) %>%
+  summarise(n_dss = n())
+df_ind_agree <- df_n_sur %>% 
+  left_join(df_n_dss)
+# woman with 7 miscarriages in survey and 1 in dss
+subset(df_ind_agree, n_sur == 7 & n_dss == 1)
+overall %>%
+  filter(rid_m == "4V47035405") %>% 
+  select(match_n, rid_m, cid_m, 
+         dob_m_dss, doi_m_dss, pregout_dss, name_c_dss, sex_c_dss, dob_c_dss, dod_c_dss, 
+         c215, c216, c218, c219, c220, c223) %>%
+  as.data.frame()
+# she had 3 abortions and 1 miscarriage in dss
+# she had 6 miscarriages in fph
+
 
 # Figure: total number of events --------------------------------------------------
 
@@ -855,16 +881,24 @@ myplot
 ggsave("./gen/figures/total-events-bysource-reldif.png", myplot, width = 8, height = 3, dpi = 500)
 
 
-datTabAll %>%
-  filter(denom %in% c("A", "B", "C")) %>%
-  mutate(reldif =  100 * (n_sur - n_dss)/n_dss) %>%
-  filter(denom %in% c("B", "C") & outcome == "Stillbirth")
+
+
+
 
 datTabAll %>%
   filter(denom %in% c("A", "B", "C")) %>%
   mutate(reldif =  100 * (n_sur - n_dss)/n_dss) %>%
-  filter(denom %in% c("B", "C") & outcome == "Abortion") %>%
-  mutate(round(reldif, 1)) %>% as.data.frame()
+  filter(denom %in% c("B", "C") & outcome %in% c("Pregnancy", "Live birth", "Non-surviving children"))
+
+datTabAll %>%
+  filter(denom %in% c("A", "B", "C")) %>%
+  mutate(reldif =  100 * (n_sur - n_dss)/n_dss) %>%
+  filter(denom %in% c("B", "C") & outcome == "Stillbirth") %>% as.data.frame()
+
+datTabAll %>%
+  filter(denom %in% c("A", "B", "C")) %>%
+  mutate(reldif =  100 * (n_sur - n_dss)/n_dss) %>%
+  filter(denom %in% c("B", "C") & outcome == "Abortion")  %>% as.data.frame()
 
 datTabAll %>%
   filter(denom %in% c("A", "B", "C")) %>%
@@ -874,5 +908,5 @@ datTabAll %>%
 datTabAll %>%
   filter(denom %in% c("A", "B", "C")) %>%
   mutate(reldif =  100 * (n_sur - n_dss)/n_dss) %>%
-  filter(denom %in% c("B", "C") & outcome %in% c("Pregnancy", "Live birth", "Non-surviving children"))
+  filter(denom %in% c("B", "C") & outcome == "5-9y death") 
          
