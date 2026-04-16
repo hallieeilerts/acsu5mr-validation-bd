@@ -29,10 +29,21 @@ source("./src/augment/recode-overallDob.R", local = new.env())
 
 # Analysis ----------------------------------------------------------------
 
+# aggregate
 source("./src/analysis/aggregate-agreement.R", local = new.env())
-source("./src/analysis/misclassificatin-stb-lb.R", local = new.env())
-source("./src/analysis/omissions-additions.R", local = new.env())
+
+# descriptive
+source("./src/analysis/omissions.R", local = new.env())
+source("./src/analysis/omissions-char.R", local = new.env())
+source("./src/analysis/additions-omissions.R", local = new.env())
+source("./src/analysis/transfers.R", local = new.env())
+
+# regression
+source("./src/analysis/omissions-regression.R", local = new.env())
+
+
 source("./src/analysis/omissions-additions-char.R", local = new.env())
+source("./src/analysis/misclassificatin-stb-lb.R", local = new.env())
 #source("./src/analysis/age-date-displacement.R", local = new.env())
 
 

@@ -289,6 +289,13 @@ dat <- dat %>%
   mutate(dob_c_comb = as.Date(dob_c_comb, format = "%d-%b-%Y"))
 nrow(subset(dat, is.na(dob_c_comb))) # 0
 
+# combined date of death (deferring to dss)
+nrow(subset(dat, !is.na(dod_c_dss))) # 694
+nrow(subset(dat, !is.na(dod_c_sur))) # 716
+dat <- dat %>%
+  mutate(dod_c_comb = dplyr::if_else(!is.na(dod_c_dss), dod_c_dss, dod_c_sur)) %>%
+  mutate(dod_c_comb = as.Date(dod_c_comb, format = "%d-%b-%Y"))
+
 # combined birth order (deferring to dss)
 dat <- dat %>%
   mutate(birthorder_comb = coalesce(as.numeric(parity_dss), as.numeric(parity_sur))) %>%
@@ -307,15 +314,28 @@ dat <- dat %>%
 dat <- dat %>%
   mutate(cstatus_agesp_comb = coalesce(cstatus_agesp_dss, cstatus_agesp_sur))
 
-
-
+# birth recency
 dat <- dat %>%
   mutate(birthrecency = as.numeric(as.Date(max(unique(dat$int_date_sur))) - dob_c_comb)/365.25,
-           #year(int_date_sur) - year(dob_c_comb)
+         birthrecency_dss = as.numeric(as.Date(max(unique(dat$int_date_sur))) - dob_c_dss)/365.25,
+         birthrecency_sur = as.numeric(as.Date(max(unique(dat$int_date_sur))) - c220)/365.25,
            ) %>%
-  mutate(birthrecency_cat = cut(birthrecency, breaks = c(-1,4,9,14,100), 
-                                 labels = c("0-4","5-9", "10-14", "15+"))) 
+  mutate(birthrecency_cat = cut(birthrecency, breaks = c(-1,4,9,14,100), labels = c("0-4","5-9", "10-14", "15+")),
+         birthrecency_cat_dss = cut(birthrecency_dss, breaks = c(-1,4,9,14,100), labels = c("0-4","5-9", "10-14", "15+")),
+         birthrecency_cat_sur = cut(birthrecency_sur, breaks = c(-1,4,9,14,100), labels = c("0-4","5-9", "10-14", "15+"))
+         ) 
   #select(dob_c_comb, birth_recency, birth_recency_cat) %>% filter(birth_recency == 10)
+
+# death recency
+dat <- dat %>%
+  mutate(deathrecency = as.numeric(as.Date(max(unique(dat$int_date_sur))) - dod_c_comb)/365.25,
+         deathrecency_dss = as.numeric(as.Date(max(unique(dat$int_date_sur))) - dod_c_dss)/365.25,
+         deathrecency_sur = as.numeric(as.Date(max(unique(dat$int_date_sur))) - dod_c_sur)/365.25,
+  ) %>%
+  mutate(deathrecency_cat = cut(deathrecency, breaks = c(-1,4,9,14,100), labels = c("0-4","5-9", "10-14", "15+")),
+         deathrecency_cat_dss = cut(deathrecency_dss, breaks = c(-1,4,9,14,100), labels = c("0-4","5-9", "10-14", "15+")),
+         deathrecency_cat_sur = cut(deathrecency_sur, breaks = c(-1,4,9,14,100), labels = c("0-4","5-9", "10-14", "15+"))) 
+nrow(subset(dat, is.na(deathrecency))) # 2387
 
 # create child strata for just age
 dat <- dat %>%
