@@ -728,6 +728,7 @@ datTab <- fn_aggAgreement(dat, outcome = "Pregnancy", denom = "A", plot = FALSE)
 datPr <- fn_totaleventsTable(datTab, denom = "A", outcome = "Pregnancy")
 datTab <- fn_aggAgreement(dat, outcome = "Live birth", denom = "A", plot = FALSE)
 datLB <- fn_totaleventsTable(datTab, denom = "A", outcome = "Live birth")
+datLBa <- datLB
 datTab <- fn_aggAgreement(dat, outcome = "Stillbirth", denom = "A", plot = FALSE)
 datSB <- fn_totaleventsTable(datTab, denom = "A", outcome = "Stillbirth")
 datTab <- fn_aggAgreement(dat, outcome = "Miscarriage", denom = "A", plot = FALSE)
@@ -748,6 +749,7 @@ datTab <- fn_aggAgreement(dat, outcome = "Surviving", denom = "A", plot = FALSE)
 datSurv <- fn_totaleventsTable(datTab, denom = "A", outcome = "Surviving children")
 datTab <- fn_aggAgreement(dat, outcome = "Died", denom = "A", plot = FALSE)
 datDied <- fn_totaleventsTable(datTab, denom = "A", outcome = "Non-surviving children")
+datDieda <- datDied
 # combine
 datTabAllA <- rbind(datPr, datLB, datSB, datMSC, datAB,
                    datNeo, datPneo, datChild, datOlderchild,
@@ -759,6 +761,7 @@ datTab <- fn_aggAgreement(dat, outcome = "Pregnancy", denom = "B", plot = FALSE)
 datPr <- fn_totaleventsTable(datTab, denom = "B", outcome = "Pregnancy")
 datTab <- fn_aggAgreement(dat, outcome = "Live birth", denom = "B", plot = FALSE)
 datLB <- fn_totaleventsTable(datTab, denom = "B", outcome = "Live birth")
+datLBb <- datLB
 datTab <- fn_aggAgreement(dat, outcome = "Stillbirth", denom = "B", plot = FALSE)
 datSB <- fn_totaleventsTable(datTab, denom = "B", outcome = "Stillbirth")
 datTab <- fn_aggAgreement(dat, outcome = "Miscarriage", denom = "B", plot = FALSE)
@@ -779,6 +782,7 @@ datTab <- fn_aggAgreement(dat, outcome = "Surviving", denom = "B", plot = FALSE)
 datSurv <- fn_totaleventsTable(datTab, denom = "B", outcome = "Surviving children")
 datTab <- fn_aggAgreement(dat, outcome = "Died", denom = "B", plot = FALSE)
 datDied <- fn_totaleventsTable(datTab, denom = "B", outcome = "Non-surviving children")
+datDiedb <- datDied
 # combine
 datTabAllB <- rbind(datPr, datLB, datSB, datMSC, datAB,
                       datNeo, datPneo, datChild, datOlderchild,
@@ -790,6 +794,7 @@ datTab <- fn_aggAgreement(dat, outcome = "Pregnancy", denom = "C", plot = FALSE)
 datPr <- fn_totaleventsTable(datTab, denom = "C", outcome = "Pregnancy")
 datTab <- fn_aggAgreement(dat, outcome = "Live birth", denom = "C", plot = FALSE)
 datLB <- fn_totaleventsTable(datTab, denom = "C", outcome = "Live birth")
+datLBc <- datLB
 datTab <- fn_aggAgreement(dat, outcome = "Stillbirth", denom = "C", plot = FALSE)
 datSB <- fn_totaleventsTable(datTab, denom = "C", outcome = "Stillbirth")
 datTab <- fn_aggAgreement(dat, outcome = "Miscarriage", denom = "C", plot = FALSE)
@@ -810,6 +815,7 @@ datTab <- fn_aggAgreement(dat, outcome = "Surviving", denom = "C", plot = FALSE)
 datSurv <- fn_totaleventsTable(datTab, denom = "C", outcome = "Surviving children")
 datTab <- fn_aggAgreement(dat, outcome = "Died", denom = "C", plot = FALSE)
 datDied <- fn_totaleventsTable(datTab, denom = "C", outcome = "Non-surviving children")
+datDiedc <- datDied
 # combine
 datTabAllC <- rbind(datPr, datLB, datSB, datMSC, datAB,
                     datNeo, datPneo, datChild, datOlderchild,
@@ -909,4 +915,17 @@ datTabAll %>%
   filter(denom %in% c("A", "B", "C")) %>%
   mutate(reldif =  100 * (n_sur - n_dss)/n_dss) %>%
   filter(denom %in% c("B", "C") & outcome == "5-9y death") 
+
+
+# Numbers for sample -------------------------------------------------------
+
+
+datNum <- data.frame(subsample = c("all-pregnancies", "lifelong-residents", "recent-pregnancies"),
+           nWomen = c(n_womA, n_womB, n_womC),
+           nLb_dss = c(datLBa$n_dss, datLBb$n_dss, datLBc$n_dss),
+           nLb_sur = c(datLBa$n_sur, datLBb$n_sur, datLBc$n_sur),
+           nDth_dss = c(datDieda$n_dss, datDiedb$n_dss, datDiedc$n_dss),
+           nDth_sur = c(datDieda$n_sur, datDiedb$n_sur, datDiedc$n_sur))
+
+write.csv(datNum, "./gen/audit/num1.csv", row.names = FALSE)
          

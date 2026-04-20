@@ -14,7 +14,7 @@ library(flextable)
 overall <- readRDS("./gen/augment/overallDob-recode.rds")
 ################################################################################
 
-# Subsamples: all-women (A), lifelong-resident (B), recent-pregnancies (C)
+# Subsamples: (A) all-women, (B)lifelong-resident, (C) recent-pregnancies
 # Denominator: deaths in DSS
 # Since this is event level agreement, we use DSS as the reference standard.
 # Matched DSS and FPH events are included conditional on the DSS DOB
@@ -23,18 +23,13 @@ dat <- overall %>%
   mutate(subsampA = 1,
          subsampB = ifelse(dob_m_dss == doi_m_dss, 1, 0),
          subsampC = ifelse(
-           # mother's in-migration is more than 10 years ago, and
+           # mother's in-migration is more than 15 years ago, and
            as.numeric(as.Date(max(unique(overall$int_date_sur))) - doi_m_dss)/365.25 >= 15 & 
-             # dss dob is within past 10 years or
+             # dss dob is within past 15 years or
              (!is.na(dob_c_dss) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - dob_c_dss)/365.25 <= 15 | 
                 # unmatched validation study dob is within past 10 years
                 (is.na(dob_c_dss) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - c220)/365.25 <= 15)), 
            1, 0),
-         # # live births in dss
-         # eventLB_dss = ifelse(!is.na(pregout_dss) & pregout_dss == "Live birth", 1, 0),
-         # # live births in each source
-         # eventLB = ifelse((!is.na(pregout_dss) & pregout_dss == "Live birth") |
-         #                    (!is.na(c223) & c223 == "Live birth"), 1, 0),
          # deaths in dss
          eventDth_dss = ifelse(cstatus_dss == "Died", 1, 0),
          # deaths in each source

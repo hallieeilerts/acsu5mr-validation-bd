@@ -16,12 +16,24 @@ overall <- readRDS("./gen/augment/overallDob-recode.rds")
 
 # Subsample: matched events (D) (deaths only)
 dat <- subset(overall, type == "VS_Match" & (cstatus_dss == "Died" | cstatus_sur == "Died"))
+nrow(dat) # 614
+# drop cases where FPH says died and DSS does not. presumably dss hasn't captured death yet, but will
+dat <- subset(overall, type == "VS_Match" & (cstatus_dss == "Died" & cstatus_sur == "Died"))
+nrow(dat) # 612
+
+# data for entire sample, not just deaths
+# live births only (stipulated that cstatus is "Died", as done above, effectively does the same thing)
+datSamp <- subset(overall, type == "VS_Match" & 
+                    pregout_dss == "Live birth" & c223 == "Live birth")
+datSamp <- subset(datSamp, !((cstatus_dss == "Died" & cstatus_sur != "Died") |
+                    (cstatus_dss != "Died" & cstatus_sur == "Died")))
+nrow(datSamp) # 1966
 
 # Age of death transfers --------------------------------------------------
 
 # age transfer
+
 dat %>%
-  filter(cstatus_agesp_dss != "Surviving") %>% # drop cases where FPH says died and DSS does not. presumably dss hasn't captured death yet, but will
   group_by(cstatus_agesp_dss, cstatus_agesp_sur) %>%
   summarise(n = n()) %>%
   mutate(total = sum(n),
@@ -29,7 +41,6 @@ dat %>%
 
 # Deaths transferring out of each age group (DSS is reference)
 transfers_out <- dat %>%
-  filter(cstatus_agesp_dss != "Surviving") %>%
   mutate(classified = case_when(
     cstatus_agesp_dss == cstatus_agesp_sur ~ "correct",
     TRUE ~ "transfer_out"
@@ -44,7 +55,6 @@ transfers_out <- dat %>%
 
 # Deaths transferring into each age group from FPH (DSS is reference)
 transfers_in <- dat %>%
-    filter(cstatus_agesp_dss != "Surviving") %>%
     filter(cstatus_agesp_dss != cstatus_agesp_sur) %>%
     group_by(cstatus_agesp_sur) %>%
     summarise(n_in = n(), .groups = "drop") %>%
@@ -54,7 +64,7 @@ transfers_in <- dat %>%
 tabAODtran <- transfers_out %>%
   left_join(transfers_in, by = "cstatus_agesp_dss") %>%
   replace_na(list(n_in = 0)) %>% 
-  filter(cstatus_agesp_dss != "10+") %>%
+  #filter(cstatus_agesp_dss != "10+") %>%
   bind_rows( # add total
     summarise(.,
               cstatus_agesp_dss = "Total",
@@ -70,7 +80,7 @@ tabAODtran <- transfers_out %>%
     per_in      = n_in/n_total*100 
   ) %>%
   mutate(cstatus_agesp_dss = factor(cstatus_agesp_dss, 
-              levels = c("Neonatal", "Postneonatal", "1-4", "5-9", "Total"))) %>%
+              levels = c("Neonatal", "Postneonatal", "1-4", "5-9", "10+","Total"))) %>%
   arrange(cstatus_agesp_dss) %>%
   mutate(per_correct = sprintf("%.2f", round(per_correct, 2)),
          per_out = sprintf("%.2f", round(per_out, 2)),
@@ -108,7 +118,6 @@ cat("Saved to:", output_path, "\n")
 
 
 transfers_out <- dat %>%
-  filter(cstatus_agesp_dss != "Surviving") %>%
   filter(cstatus_agesp_dss == cstatus_agesp_sur) %>%  # same age at death group
   group_by(deathrecency_cat_dss) %>%
   summarise(
@@ -119,7 +128,6 @@ transfers_out <- dat %>%
   )
 
 transfers_in <- dat %>%
-  filter(cstatus_agesp_dss != "Surviving") %>%
   filter(cstatus_agesp_dss == cstatus_agesp_sur,
          deathrecency_cat_dss != deathrecency_cat_sur) %>%
   group_by(deathrecency_cat_sur) %>%
@@ -130,7 +138,7 @@ transfers_in <- dat %>%
 tabPeriodtran <- transfers_out %>%
   left_join(transfers_in, by = "deathrecency_cat_dss") %>%
   replace_na(list(n_in = 0)) %>%
-  filter(deathrecency_cat_dss != "15+") %>%
+  #filter(deathrecency_cat_dss != "15+") %>%
   bind_rows( # add total
     summarise(.,
               deathrecency_cat_dss = "Total",
@@ -146,7 +154,7 @@ tabPeriodtran <- transfers_out %>%
     per_in      = n_in/n_total*100 
   ) %>%
   mutate(deathrecency_cat_dss = factor(deathrecency_cat_dss, 
-                                    levels = c("0-4", "5-9", "10-14",  "Total"))) %>%
+                                    levels = c("0-4", "5-9", "10-14", "15+", "Total"))) %>%
   arrange(deathrecency_cat_dss) %>%
   mutate(per_correct = sprintf("%.2f", round(per_correct, 2)),
          per_out = sprintf("%.2f", round(per_out, 2)),
@@ -186,7 +194,6 @@ cat("Saved to:", output_path, "\n")
 
 # transferred out
 dat %>%
-  filter(cstatus_agesp_dss != "Surviving") %>%
   filter(cstatus_agesp_dss == cstatus_agesp_sur) %>%  # same age at death group
   group_by(birthrecency_cat_dss) %>%
   summarise(
@@ -197,8 +204,20 @@ dat %>%
   )
 # transferred in
 dat %>%
-  filter(cstatus_agesp_dss != "Surviving") %>%
   filter(cstatus_agesp_dss == cstatus_agesp_sur,
          birthrecency_cat_dss != birthrecency_cat_sur) %>%
   group_by(birthrecency_cat_sur) %>%
   summarise(n_in = n(), .groups = "drop") 
+
+
+# Numbers for sample -------------------------------------------------------
+
+# Subsample: matched events (D) (deaths only)
+datNum <- data.frame(subsample = c("matched-events"),
+                     nWomen = length(unique(datSamp$rid_m)),
+                     nLb_dss = nrow(datSamp),
+                     nLb_sur = nrow(datSamp),
+                     nDth_dss = nrow(subset(datSamp, cstatus_dss == "Died")),
+                     nDth_sur = nrow(subset(datSamp, cstatus_sur == "Died")))
+datNum
+write.csv(datNum, "./gen/audit/num2.csv", row.names = FALSE)

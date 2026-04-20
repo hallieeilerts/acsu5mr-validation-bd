@@ -91,6 +91,11 @@ dat <- dat %>%
 nrow(subset(dat, is.na(mage_int))) # 0
 nrow(subset(dat, is.na(magecat_int))) # 0
 nrow(subset(dat, is.na(magecat2_int))) # 0
+## check breaks
+# dat %>%
+#   select(mage_int, magecat_int, magecat2_int) %>%
+#   distinct() %>% View
+
 
 # Max parity dss
 df_parity <- dat %>%
@@ -103,6 +108,11 @@ dat <- dat %>%
   left_join(df_parity, by = "rid_m") %>%
   relocate(paritymax_dss, .after = parity_dss) %>%
   relocate(paritymaxcat_dss, .after = paritymax_dss)
+
+# # check breaks
+# dat %>%
+#   select(paritymax_dss, paritymaxcat_dss) %>%
+#   distinct() %>% View
 
 # Max parity sur
 df_parity <- dat %>%
@@ -300,7 +310,11 @@ dat <- dat %>%
 dat <- dat %>%
   mutate(birthorder_comb = coalesce(as.numeric(parity_dss), as.numeric(parity_sur))) %>%
   mutate(birthorder_cat_comb = cut(birthorder_comb, breaks = c(0,1,2,3,100), labels = c("1","2","3", "4+")))
-  
+# # check breaks
+# dat %>%
+#   select(birthorder_comb,birthorder_cat_comb) %>%
+#   distinct() %>% View
+
 # combined parity max (deferring to dss)
 dat <- dat %>%
   mutate(paritymax_comb = coalesce(paritymax_dss, paritymax_sur)) %>%
@@ -320,11 +334,22 @@ dat <- dat %>%
          birthrecency_dss = as.numeric(as.Date(max(unique(dat$int_date_sur))) - dob_c_dss)/365.25,
          birthrecency_sur = as.numeric(as.Date(max(unique(dat$int_date_sur))) - c220)/365.25,
            ) %>%
-  mutate(birthrecency_cat = cut(birthrecency, breaks = c(-1,4,9,14,100), labels = c("0-4","5-9", "10-14", "15+")),
-         birthrecency_cat_dss = cut(birthrecency_dss, breaks = c(-1,4,9,14,100), labels = c("0-4","5-9", "10-14", "15+")),
-         birthrecency_cat_sur = cut(birthrecency_sur, breaks = c(-1,4,9,14,100), labels = c("0-4","5-9", "10-14", "15+"))
+  mutate(birthrecency_cat = cut(birthrecency, breaks = c(-1,5,10,15,100), labels = c("0-4","5-9", "10-14", "15+")),
+         birthrecency_cat_dss = cut(birthrecency_dss, breaks = c(-1,5,10,15,100), labels = c("0-4","5-9", "10-14", "15+")),
+         birthrecency_cat_sur = cut(birthrecency_sur, breaks = c(-1,5,10,15,100), labels = c("0-4","5-9", "10-14", "15+"))
          ) 
   #select(dob_c_comb, birth_recency, birth_recency_cat) %>% filter(birth_recency == 10)
+## check breaks
+# dat %>%
+#   mutate(birthrecency = as.numeric(as.Date(max(unique(dat$int_date_sur))) - dob_c_comb)/365.25,
+#          birthrecency_dss = as.numeric(as.Date(max(unique(dat$int_date_sur))) - dob_c_dss)/365.25,
+#          birthrecency_sur = as.numeric(as.Date(max(unique(dat$int_date_sur))) - c220)/365.25,
+#   ) %>%
+#   mutate(birthrecency_cat = cut(birthrecency, breaks = c(-1,5,10,15,100), labels = c("0-4","5-9", "10-14", "15+")),
+#          birthrecency_cat_dss = cut(birthrecency_dss, breaks = c(-1,5,10,15,100), labels = c("0-4","5-9", "10-14", "15+")),
+#          birthrecency_cat_sur = cut(birthrecency_sur, breaks = c(-1,4,9,14,100), labels = c("0-4","5-9", "10-14", "15+"))
+#   ) %>%
+#   select(birthrecency, birthrecency_cat, birthrecency_dss, birthrecency_cat_dss, birthrecency_sur, birthrecency_cat_sur)
 
 # death recency
 dat <- dat %>%
@@ -332,9 +357,9 @@ dat <- dat %>%
          deathrecency_dss = as.numeric(as.Date(max(unique(dat$int_date_sur))) - dod_c_dss)/365.25,
          deathrecency_sur = as.numeric(as.Date(max(unique(dat$int_date_sur))) - dod_c_sur)/365.25,
   ) %>%
-  mutate(deathrecency_cat = cut(deathrecency, breaks = c(-1,4,9,14,100), labels = c("0-4","5-9", "10-14", "15+")),
-         deathrecency_cat_dss = cut(deathrecency_dss, breaks = c(-1,4,9,14,100), labels = c("0-4","5-9", "10-14", "15+")),
-         deathrecency_cat_sur = cut(deathrecency_sur, breaks = c(-1,4,9,14,100), labels = c("0-4","5-9", "10-14", "15+"))) 
+  mutate(deathrecency_cat = cut(deathrecency, breaks = c(-1,5,10,15,100), labels = c("0-4","5-9", "10-14", "15+")),
+         deathrecency_cat_dss = cut(deathrecency_dss, breaks = c(-1,5,10,15,100), labels = c("0-4","5-9", "10-14", "15+")),
+         deathrecency_cat_sur = cut(deathrecency_sur, breaks = c(-1,5,10,15,100), labels = c("0-4","5-9", "10-14", "15+"))) 
 nrow(subset(dat, is.na(deathrecency))) # 2387
 
 # create child strata for just age
