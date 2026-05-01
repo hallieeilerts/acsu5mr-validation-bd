@@ -18,7 +18,7 @@ library(marginaleffects)
 library(stringr)
 library(lme4)
 #' Inputs
-overall <- readRDS("./gen/augment/overallDob-recode.rds")
+overall <- readRDS("./gen/augment/overallName-recode.rds")
 ################################################################################
 
 # Omissions
@@ -49,7 +49,8 @@ dat <- overall %>%
 
 vars <- c(
   "birthorder_cat_comb", "paritymaxcat_comb", "birthrecency_cat", "deathrecency_cat",
-  "magecat2_int", "hhsizecat_sur", "hhassets_sur", "observer_sur",
+  "magecat2_int", "hhsizecat_sur", "hhassets_sur", 
+  "intinterupt_sur", "observer_sur", "intcoop_sur", "breakdown_sur",
   "cstatus_agesp_comb", "cstrata_ac"
 )
 
@@ -128,7 +129,7 @@ tabDth <- tabDth %>%
 
 # order variables
 # household level
-v_hh <- c("hhsizecat_sur", "hhassets_sur", "observer_sur")
+v_hh <- c("hhsizecat_sur", "hhassets_sur", "observer_sur", "intinterupt_sur", "intcoop_sur", "breakdown_sur")
 # women-level
 v_wom <- c("magecat2_int", "paritymaxcat_comb")
 # child-level
@@ -158,6 +159,17 @@ tabDth <- tabDth %>%
     variable == "observer_sur" & value == "No one" ~ 1,
     variable == "observer_sur" & value == "Partial" ~ 2,
     variable == "observer_sur" & value == "Full time" ~ 3,
+    variable == "intinterupt_sur" & value == "Not at all" ~ 1,
+    variable == "intinterupt_sur" & value == "Partially" ~ 2,
+    variable == "intinterupt_sur" & value == "Fully" ~ 3,
+    variable == "intcoop_sur" & value == "Normal" ~ 1,
+    variable == "intcoop_sur" & value == "Good" ~ 2,
+    variable == "intcoop_sur" & value == "Very good" ~ 3,
+    variable == "breakdown_sur" & value == "Missing" ~ 1,
+    variable == "breakdown_sur" & value == "None" ~ 2,
+    variable == "breakdown_sur" & value == "Mild" ~ 3,
+    variable == "breakdown_sur" & value == "Moderate" ~ 4,
+    variable == "breakdown_sur" & value == "Severe" ~ 5,
     variable == "cstatus_agesp_comb" & value == "Surviving" ~ 1,
     variable == "cstatus_agesp_comb" & value == "Neonatal" ~ 2,
     variable == "cstatus_agesp_comb" & value == "Postneonatal" ~ 3,
@@ -186,12 +198,15 @@ tabDth <- tabDth %>%
     variable == "hhsizecat_sur" ~ "Household size",
     variable == "hhassets_sur"  ~ "Household wealth quintile",
     variable == "observer_sur"  ~ "Interview observed by others",
+    variable == "intinterupt_sur"  ~ "Interview interrupted by others",
+    variable == "intcoop_sur"  ~ "Respondent cooperation",
+    variable == "breakdown_sur"  ~ "Respondent emotional breakdown",
     variable == "magecat2_int" ~ "Mother age",
     variable == "paritymaxcat_comb" ~ "Mother parity",
     variable == "birthorder_cat_comb" ~ "Birth order",
-    variable == "birthrecency_cat"   ~ "Birth recency (years)",
-    variable == "deathrecency_cat"   ~ "Death recency (years)",
-    variable == "cstatus_agesp_comb"   ~ "Age of death",
+    variable == "birthrecency_cat"   ~ "Birth recall period (years)",
+    variable == "deathrecency_cat"   ~ "Death recall period (years)",
+    variable == "cstatus_agesp_comb"   ~ "Age-at-death",
     variable == "cstrata_ac"   ~ "Cause of death",
     variable == "total"   ~ "Total",
   )) %>%
@@ -231,7 +246,8 @@ doc <- read_docx() %>%
 
 vars <- c(
   "birthorder_cat_comb", "paritymaxcat_comb", "birthrecency_cat", "deathrecency_cat",
-  "magecat2_int", "hhsizecat_sur", "hhassets_sur", "observer_sur",
+  "magecat2_int", "hhsizecat_sur", "hhassets_sur", 
+  "intinterupt_sur", "observer_sur", "intcoop_sur", "breakdown_sur",
   "cstatus_agesp_comb"
 )
 
@@ -313,7 +329,7 @@ tabDth <- tabDth %>%
 
 # order variables
 # household level
-v_hh <- c("hhsizecat_sur", "hhassets_sur", "observer_sur")
+v_hh <- c("hhsizecat_sur", "hhassets_sur", "observer_sur", "intinterupt_sur", "intcoop_sur", "breakdown_sur")
 # women-level
 v_wom <- c("magecat2_int", "paritymaxcat_comb")
 # child-level
@@ -343,6 +359,17 @@ tabDth <- tabDth %>%
     variable == "observer_sur" & value == "No one" ~ 1,
     variable == "observer_sur" & value == "Partial" ~ 2,
     variable == "observer_sur" & value == "Full time" ~ 3,
+    variable == "intinterupt_sur" & value == "Not at all" ~ 1,
+    variable == "intinterupt_sur" & value == "Partially" ~ 2,
+    variable == "intinterupt_sur" & value == "Fully" ~ 3,
+    variable == "intcoop_sur" & value == "Normal" ~ 1,
+    variable == "intcoop_sur" & value == "Good" ~ 2,
+    variable == "intcoop_sur" & value == "Very good" ~ 3,
+    variable == "breakdown_sur" & value == "Missing" ~ 1,
+    variable == "breakdown_sur" & value == "None" ~ 2,
+    variable == "breakdown_sur" & value == "Mild" ~ 3,
+    variable == "breakdown_sur" & value == "Moderate" ~ 4,
+    variable == "breakdown_sur" & value == "Severe" ~ 5,
     variable == "cstatus_agesp_comb" & value == "Surviving" ~ 1,
     variable == "cstatus_agesp_comb" & value == "Neonatal" ~ 2,
     variable == "cstatus_agesp_comb" & value == "Postneonatal" ~ 3,
@@ -359,12 +386,15 @@ tabDth <- tabDth %>%
     variable == "hhsizecat_sur" ~ "Household size",
     variable == "hhassets_sur"  ~ "Household wealth quintile",
     variable == "observer_sur"  ~ "Interview observed by others",
+    variable == "intinterupt_sur"  ~ "Interview interrupted by others",
+    variable == "intcoop_sur"  ~ "Respondent cooperation",
+    variable == "breakdown_sur"  ~ "Respondent emotional breakdown",
     variable == "magecat2_int" ~ "Mother age",
     variable == "paritymaxcat_comb" ~ "Mother parity",
     variable == "birthorder_cat_comb" ~ "Birth order",
-    variable == "birthrecency_cat"   ~ "Birth recency (years)",
-    variable == "deathrecency_cat"   ~ "Death recency (years)",
-    variable == "cstatus_agesp_comb"   ~ "Age of death",
+    variable == "birthrecency_cat"   ~ "Birth recall period (years)",
+    variable == "deathrecency_cat"   ~ "Death recall period (years)",
+    variable == "cstatus_agesp_comb"   ~ "Age-at-death",
     variable == "total"   ~ "Total",
   )) %>%
   select(-c(variablerank, valuerank)) 
@@ -407,6 +437,8 @@ ft <- tabDthComb %>%
   set_header_labels(values = c("Variable", "Value", "N", "%", "N", "%", "p-value", "N", "%", "N", "%", "p-value")) %>%
   add_header_row(values = c(" ","Match", "Omission", " ", "Match", "Addition", " "), 
                  colwidths = c(2, 2, 2, 1, 2, 2, 1)) %>%
+  add_header_row(values = c(" ","All-women", "Recent-pregnancies"), 
+                 colwidths = c(2, 5, 5)) %>%
   set_caption(caption = "") %>%
   merge_v(j = ~ variable + pvalcat_o + pvalcat_a) %>%
   flextable::fontsize(size = 9, part = "all") %>%

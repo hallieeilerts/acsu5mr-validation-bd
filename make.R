@@ -18,14 +18,14 @@ source("./src/clean/basic-exploration.R", local = new.env())
 source("./src/clean/prep-survey.R", local = new.env())
 source("./src/clean/prep-hdss.R", local = new.env())
 source("./src/clean/prep-overallDate.R", local = new.env())
-source("./src/clean/prep-overallDob.R", local = new.env())
+source("./src/clean/prep-overallName.R", local = new.env())
 
 # Create augmented files that include all records -------------------------
 
 source("./src/augment/augment-overallDate.R", local = new.env())
-source("./src/augment/augment-overallDob.R", local = new.env())
+source("./src/augment/augment-overallName.R", local = new.env())
 source("./src/augment/recode-overallDate.R", local = new.env())
-source("./src/augment/recode-overallDob.R", local = new.env())
+source("./src/augment/recode-overallName.R", local = new.env())
 
 # Analysis ----------------------------------------------------------------
 
@@ -34,11 +34,13 @@ source("./src/analysis/aggregate-agreement.R", local = new.env())
 
 # descriptive
 source("./src/analysis/additions-omissions.R", local = new.env())
-source("./src/analysis/transfers.R", local = new.env())
 source("./src/analysis/char-additions-omissions.R", local = new.env())
+source("./src/analysis/transfers.R", local = new.env())
 
 # regression
 source("./src/analysis/regression-additions-omissions.R", local = new.env())
+
+source("./src/analysis/denom-check.R", local = new.env())
 
 
 # Other -------------------------------------------------------------------

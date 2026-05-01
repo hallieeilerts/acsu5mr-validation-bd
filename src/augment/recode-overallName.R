@@ -10,7 +10,7 @@ library(dplyr)
 library(haven)
 library(lubridate)
 #' Inputs
-dat <- readRDS("./gen/augment/overallDob-aug.rds")
+dat <- readRDS("./gen/augment/overallName-aug.rds")
 ################################################################################
 
 # Recode ------------------------------------------------------------------
@@ -162,6 +162,19 @@ dat <- dat %>%
   left_join(df_meducat, by = "rid_m") %>%
   relocate(meducat_sur, .after = b114) 
 
+# presence of others during section c
+table(dat$c244, useNA = "always")
+# anyone else around
+table(dat$d8, useNA = "always")
+# interview interruption
+table(dat$d2, useNA = "always")
+# familiarity with interviewer
+table(dat$d4, useNA = "always")
+# respondent cooperation
+table(dat$d7, useNA = "always")
+# other working during interview
+table(dat$d10, useNA = "always")
+
 # categorize c244: whether someone was there during interview
 table(dat$c244, useNA = "always")
 # it is missing for the unmatched records from the HDSS
@@ -195,6 +208,108 @@ nrow(subset(df_int_observer, is.na(observer_sur))) # 0
 dat <- dat %>%
   left_join(df_int_observer, by = "rid_m") %>%
   relocate(observer_sur, .after = c244) 
+
+# categorize d2: interview interruption
+table(dat$d2, useNA = "always")
+# it is missing for the unmatched records from the HDSS
+table(dat$d2, dat$type, useNA = "always")
+# first check that there is no one with multiple different non-na c244 values
+dat %>%
+  filter(!is.na(d2)) %>%
+  select(rid_m, d2) %>%
+  distinct() %>%
+  group_by(rid_m) %>%
+  summarise(n = n()) %>%
+  filter(n > 1) %>%
+  nrow() # 0
+# create one d2 per person, recoding as Missing where appropriate
+df_intinterupt <- dat %>%
+  mutate(hasd2 = ifelse(!is.na(d2), 1, 0)) %>%
+  group_by(rid_m) %>%
+  mutate(hasd2 = sum(hasd2)) %>%
+  mutate(intinterupt_sur = ifelse(hasd2 == 0, "Missing", as.character(d2))) %>%
+  #select(rid_m, type, pregout_dss, c244, hasc244, observer_sur) %>% filter(rid_m == "2A00012205") 
+  select(rid_m, intinterupt_sur) %>%
+  distinct() %>%
+  filter(!is.na(intinterupt_sur))
+# check we have a value for all mothers
+length(unique(dat$rid_m)[!(unique(dat$rid_m) %in% df_intinterupt$rid_m)]) # 0
+# and no NA values
+nrow(subset(df_intinterupt, is.na(intinterupt_sur))) # 0
+dat <- dat %>%
+  left_join(df_intinterupt, by = "rid_m") %>%
+  relocate(intinterupt_sur, .after = d2) 
+
+# categorize d7: respondent cooperation
+table(dat$d7, useNA = "always")
+# it is missing for the unmatched records from the HDSS
+table(dat$d7, dat$type, useNA = "always")
+# first check that there is no one with multiple different non-na c244 values
+dat %>%
+  filter(!is.na(d7)) %>%
+  select(rid_m, d7) %>%
+  distinct() %>%
+  group_by(rid_m) %>%
+  summarise(n = n()) %>%
+  filter(n > 1) %>%
+  nrow() # 0
+# create one d7 per person, recoding as Missing where appropriate
+df_intcoop <- dat %>%
+  mutate(hasd7 = ifelse(!is.na(d7), 1, 0)) %>%
+  group_by(rid_m) %>%
+  mutate(hasd7 = sum(hasd7)) %>%
+  mutate(intcoop_sur = ifelse(hasd7 == 0, "Missing", as.character(d7))) %>%
+  #select(rid_m, type, pregout_dss, c244, hasc244, observer_sur) %>% filter(rid_m == "2A00012205") 
+  select(rid_m, intcoop_sur) %>%
+  distinct() %>%
+  filter(!is.na(intcoop_sur))
+# check we have a value for all mothers
+length(unique(dat$rid_m)[!(unique(dat$rid_m) %in% df_intcoop$rid_m)]) # 0
+# and no NA values
+nrow(subset(df_intcoop, is.na(intcoop_sur))) # 0
+dat <- dat %>%
+  left_join(df_intcoop, by = "rid_m") %>%
+  relocate(intcoop_sur, .after = d7) 
+
+# categorize d11: emotional breakdown
+table(dat$d11, useNA = "always")
+# it is missing for lots of records
+table(dat$d11, dat$type, useNA = "always")
+# first check that there is no one with multiple different non-na c244 values
+dat %>%
+  filter(!is.na(d11)) %>%
+  select(rid_m, d11) %>%
+  distinct() %>%
+  group_by(rid_m) %>%
+  summarise(n = n()) %>%
+  filter(n > 1) %>%
+  nrow() # 0
+# create one d11 per person, recoding as Missing where appropriate
+df_breakdown <- dat %>%
+  mutate(hasd11 = ifelse(!is.na(d11), 1, 0)) %>%
+  group_by(rid_m) %>%
+  mutate(hasd11 = sum(hasd11)) %>%
+  mutate(breakdown_sur = ifelse(hasd11 == 0, "Missing", as.character(d11))) %>%
+  #select(rid_m, type, pregout_dss, c244, hasc244, observer_sur) %>% filter(rid_m == "2A00012205") 
+  select(rid_m, breakdown_sur) %>%
+  distinct() %>%
+  filter(!is.na(breakdown_sur))
+unique(df_breakdown$breakdown_sur)
+df_breakdown <- df_breakdown %>%
+  mutate(breakdown_sur = case_when(
+    breakdown_sur == "Not at all (Normal)" ~ "None",
+    breakdown_sur == "A little (Felt sad)" ~ "Mild",
+    breakdown_sur == "Moderate (Stayed silent for a while)" ~ "Moderate",
+    breakdown_sur == "High (Cried)" ~ "Severe",
+    TRUE ~ breakdown_sur
+  ))
+# check we have a value for all mothers
+length(unique(dat$rid_m)[!(unique(dat$rid_m) %in% df_breakdown$rid_m)]) # 0
+# and no NA values
+nrow(subset(df_breakdown, is.na(breakdown_sur))) # 0
+dat <- dat %>%
+  left_join(df_breakdown, by = "rid_m") %>%
+  relocate(breakdown_sur, .after = d11) 
 
 # household size number
 table(dat$a1, useNA = "always")
@@ -388,6 +503,20 @@ dat <- dat %>%
     TRUE ~ cstrata_ac
   )) 
 
+# create leading or non-leading
+dat <- dat %>%
+  mutate(cstrata_c_binary = cstrata_ac,
+         cstrata_c_binary = case_when( 
+           cstrata_ac == "Surviving" ~ "Surviving",
+           cstrata_ac == "Neonatal (other)" ~ "Non-leading",
+           cstrata_ac == "Neonatal (birth asphyxia)" ~ "Leading",
+           cstrata_ac == "Postneonatal (other)" ~ "Non-leading",
+           cstrata_ac ==  "Postneonatal (RI+con)"  ~ "Leading",
+           cstrata_ac == "1-4 year (other)" ~ "Non-leading",
+           cstrata_ac ==  "1-4 year (drowning)"  ~ "Leading",
+           TRUE ~ "No COD strata"
+         )) 
+
 # add ordered recnr
 dat <- dat %>%
   arrange(rid_m, dob_c_comb) %>%
@@ -417,5 +546,5 @@ length(unique(dat$uid_c_dss)) # 2506
 
 # Save output(s) ----------------------------------------------------------
 
-saveRDS(dat, "./gen/augment/overallDob-recode.rds")
+saveRDS(dat, "./gen/augment/overallName-recode.rds")
 

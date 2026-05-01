@@ -19,46 +19,33 @@ library(viridis)
 library(officer)
 library(flextable)
 #' Inputs
-overall <- readRDS("./gen/augment/overallDob-recode.rds")
+overall <- readRDS("./gen/augment/overallName-recode.rds")
 ################################################################################
 
 # Assign denominator: 
 # A - all pregnancies in both sources
 # B - all pregnancies of lifelong dss residents in both sources
-# C - pregnancies in past 10 years of women who were DSS residents in both sources
+# C - pregnancies in past 15 years of women who were DSS residents in both sources
 # Since this is aggregate agreement, DSS and FPH events are included conditional on their source-specific DOB.
 # Hence the need for denomC_dss and denomC_sur columns.
 dat <- overall %>%
-  mutate(denomA = 1,
-         denomB = ifelse(dob_m_dss == doi_m_dss, 1, 0),
-         denomC_dss = ifelse(
-           # mother's in-migration is more than 10 years ago, and
+  mutate(subsampA = 1,
+         subsampB = ifelse(dob_m_dss == doi_m_dss, 1, 0),
+         subsampC_dss = ifelse(
+           # mother's in-migration is more than 15 years ago, and
            as.numeric(as.Date(max(unique(overall$int_date_sur))) - doi_m_dss)/365.25 >= 15 & 
-             # dss dob is within past 10 years
+             # dss dob is within past 15 years
              (!is.na(dob_c_dss) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - dob_c_dss)/365.25 <= 15), 
            1, 0),
-         denomC_sur = ifelse(
-           # mother's in-migration is more than 10 years ago, and
+         subsampC_sur = ifelse(
+           # mother's in-migration is more than 15 years ago, and
            as.numeric(as.Date(max(unique(overall$int_date_sur))) - doi_m_dss)/365.25 >= 15 & 
-                # validation study dob is within past 10 years
+                # validation study dob is within past 15 years
                 (!is.na(c220) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - c220)/365.25 <= 15), 
            1, 0)) %>%
-  mutate(denomC = ifelse(denomC_dss == 1 | denomC_sur == 1, 1, 0))
-dat %>%
-  select(rid_m, denomA) %>%
-  distinct() %>%
-  group_by(denomA) %>%
-  summarise(n = n()) # 848 respondents
-dat %>%
-  select(rid_m, denomB) %>%
-  distinct() %>%
-  group_by(denomB) %>%
-  summarise(n = n()) # 210 lifelong residents
-dat %>%
-  select(rid_m, denomC) %>%
-  distinct() %>%
-  group_by(denomC) %>%
-  summarise(n = n()) # 497 women with uninterrupted residency in past 10 years
+  mutate(denomA = subsampA,
+         denomB = subsampB,
+         denomC = ifelse(subsampC_dss == 1 | subsampC_sur == 1, 1, 0))
 
 n_womA <- length(unique(subset(dat, denomA == 1)$rid_m))
 n_womB <- length(unique(subset(dat, denomB == 1)$rid_m))
@@ -76,116 +63,55 @@ dat %>%
 fn_aggAgreement <- function(dat, outcome, denom, plot = TRUE){
   
   denom_col <- paste0("denom", denom) 
-  
-  # women-level denominator (no restrictions based on timing of pregnancy)
-  if(denom %in% c("A", "B")){
-    if(outcome %in% c("Live birth", "Stillbirth", "Abortion", "Miscarriage")){
-      n_sur <- dat %>%
-        filter(c223 == outcome &
-                 .data[[denom_col]] == 1) %>%
-        group_by(rid_m) %>%
-        summarise(n = n())
-      n_dss <- dat %>%
-        filter(pregout_dss == outcome &
-                 .data[[denom_col]] == 1) %>%
-        group_by(rid_m) %>%
-        summarise(n = n())
-    }
-    if(outcome %in% c("Neonatal", "Postneonatal", "1-4", "5-9")){
-      n_sur <- dat %>%
-        filter(cstatus_agesp_sur == outcome &
-                 .data[[denom_col]] == 1) %>%
-        group_by(rid_m) %>%
-        summarise(n = n())
-      n_dss <- dat %>%
-        filter(cstatus_agesp_dss == outcome &
-                 .data[[denom_col]] == 1) %>%
-        group_by(rid_m) %>%
-        summarise(n = n())
-    }
-    if(outcome %in% c("Surviving", "Died")){
-      n_sur <- dat %>%
-        filter(cstatus_sur == outcome &
-                 .data[[denom_col]] == 1) %>%
-        group_by(rid_m) %>%
-        summarise(n = n())
-      n_dss <- dat %>%
-        filter(cstatus_dss == outcome &
-                 .data[[denom_col]] == 1) %>%
-        group_by(rid_m) %>%
-        summarise(n = n())
-    }
-    if(outcome %in% c("Pregnancy")){
-      n_sur <- dat %>%
-        filter(!is.na(cstatus_sur) &
-                 .data[[denom_col]] == 1) %>%
-        group_by(rid_m) %>%
-        summarise(n = n())
-      n_dss <- dat %>%
-        filter(!is.na(cstatus_dss) &
-                 .data[[denom_col]] == 1) %>%
-        group_by(rid_m) %>%
-        summarise(n = n())
-    }
-  }
-  
-  # women+pregnancy level denominator
-  if(!(denom %in% c("A", "B"))){
-    
-    denom_col_dss <- paste0(denom_col, "_dss") 
-    denom_col_sur <- paste0(denom_col, "_sur") 
-    
-    if(outcome %in% c("Live birth", "Stillbirth", "Abortion", "Miscarriage")){
-      n_sur <- dat %>%
-        filter(c223 == outcome &
-                 .data[[denom_col_sur]] == 1) %>%
-        group_by(rid_m) %>%
-        summarise(n = n())
-      n_dss <- dat %>%
-        filter(pregout_dss == outcome &
-                 .data[[denom_col_dss]] == 1) %>%
-        group_by(rid_m) %>%
-        summarise(n = n())
-    }
-    if(outcome %in% c("Neonatal", "Postneonatal", "1-4", "5-9")){
-      n_sur <- dat %>%
-        filter(cstatus_agesp_sur == outcome &
-                 .data[[denom_col_sur]] == 1) %>%
-        group_by(rid_m) %>%
-        summarise(n = n())
-      n_dss <- dat %>%
-        filter(cstatus_agesp_dss == outcome &
-                 .data[[denom_col_dss]] == 1) %>%
-        group_by(rid_m) %>%
-        summarise(n = n())
-    }
-    if(outcome %in% c("Surviving", "Died")){
-      n_sur <- dat %>%
-        filter(cstatus_sur == outcome &
-                 .data[[denom_col_sur]] == 1) %>%
-        group_by(rid_m) %>%
-        summarise(n = n())
-      n_dss <- dat %>%
-        filter(cstatus_dss == outcome &
-                 .data[[denom_col_dss]] == 1) %>%
-        group_by(rid_m) %>%
-        summarise(n = n())
-    }
-    if(outcome %in% c("Pregnancy")){
-      n_sur <- dat %>%
-        filter(!is.na(cstatus_sur) &
-                 .data[[denom_col_sur]] == 1) %>%
-        group_by(rid_m) %>%
-        summarise(n = n())
-      n_dss <- dat %>%
-        filter(!is.na(cstatus_dss) &
-                 .data[[denom_col_dss]] == 1) %>%
-        group_by(rid_m) %>%
-        summarise(n = n())
-    }
-  }
-  
 
+  if(outcome %in% c("Live birth", "Stillbirth", "Abortion", "Miscarriage")){
+    n_sur <- dat %>%
+      filter(c223 == outcome &
+               .data[[denom_col]] == 1) %>%
+      group_by(rid_m) %>%
+      summarise(n = n())
+    n_dss <- dat %>%
+      filter(pregout_dss == outcome &
+               .data[[denom_col]] == 1) %>%
+      group_by(rid_m) %>%
+      summarise(n = n())
+  }
+  if(outcome %in% c("Neonatal", "Postneonatal", "1-4", "5-9")){
+    n_sur <- dat %>%
+      filter(cstatus_agesp_sur == outcome &
+               .data[[denom_col]] == 1) %>%
+      group_by(rid_m) %>%
+      summarise(n = n())
+    n_dss <- dat %>%
+      filter(cstatus_agesp_dss == outcome &
+               .data[[denom_col]] == 1) %>%
+      group_by(rid_m) %>%
+      summarise(n = n())
+  }
+  if(outcome %in% c("Surviving", "Died")){
+    n_sur <- dat %>%
+      filter(cstatus_sur == outcome &
+               .data[[denom_col]] == 1) %>%
+      group_by(rid_m) %>%
+      summarise(n = n())
+    n_dss <- dat %>%
+      filter(cstatus_dss == outcome &
+               .data[[denom_col]] == 1) %>%
+      group_by(rid_m) %>%
+      summarise(n = n())
+  }
+  if(outcome %in% c("Pregnancy")){
+    n_sur <- dat %>%
+      filter(!is.na(cstatus_sur) &
+               .data[[denom_col]] == 1) %>%
+      group_by(rid_m) %>%
+      summarise(n = n())
+    n_dss <- dat %>%
+      filter(!is.na(cstatus_dss) &
+               .data[[denom_col]] == 1) %>%
+      group_by(rid_m) %>%
+      summarise(n = n())
+  }
   
   # individuals who do not have event in either source during the observation period
   n_zero <- dat %>% 
@@ -254,7 +180,7 @@ myplot1 <- plotDat %>%
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
-  labs(title = unique(plotDat$outcome), x = "FPH", y = "DSS") +
+  labs(title = unique(plotDat$outcome), x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.1, 7.1), xlim = c(-0.1, 7.1)) +
   theme_bw() +
   theme(
@@ -273,7 +199,7 @@ myplot2 <- plotDat %>%
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
-  labs(title = unique(plotDat$outcome), x = "FPH", y = "DSS") +
+  labs(title = unique(plotDat$outcome), x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
   theme_bw() +
   theme(
@@ -291,7 +217,7 @@ myplot3 <- plotDat %>%
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
-  labs(title = unique(plotDat$outcome), x = "FPH", y = "DSS") +
+  labs(title = unique(plotDat$outcome), x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
   theme_bw() +
   theme(
@@ -309,7 +235,7 @@ myplot4 <- plotDat %>%
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
-  labs(title = unique(plotDat$outcome), x = "FPH", y = "DSS") +
+  labs(title = unique(plotDat$outcome), x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
   theme_bw() +
   theme(
@@ -327,7 +253,7 @@ myplot5 <- plotDat %>%
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
-  labs(title = "Neonatal death", x = "FPH", y = "DSS") +
+  labs(title = "Neonatal death", x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
   theme_bw() +
   theme(
@@ -345,7 +271,7 @@ myplot6 <- plotDat %>%
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
-  labs(title = "Postneonatal death", x = "FPH", y = "DSS") +
+  labs(title = "Postneonatal death", x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
   theme_bw() +
   theme(
@@ -363,7 +289,7 @@ myplot7 <- plotDat %>%
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
-  labs(title = "1-4y death", x = "FPH", y = "DSS") +
+  labs(title = "1-4y death", x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
   theme_bw() +
   theme(
@@ -381,7 +307,7 @@ myplot8 <- plotDat %>%
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
-  labs(title = "5-9y death", x = "FPH", y = "DSS") +
+  labs(title = "5-9y death", x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.3, 1.3), xlim = c(-0.3, 1.3)) +
   theme_bw() +
   theme(
@@ -399,7 +325,7 @@ myplot9 <- plotDat %>%
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
-  labs(title = "Surviving children", x = "FPH", y = "DSS") +
+  labs(title = "Surviving children", x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.1, 6.1), xlim = c(-0.1, 6.1)) +
   theme_bw() +
   theme(
@@ -417,7 +343,7 @@ myplot10 <- plotDat %>%
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 210), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
-  labs(title = "Non-surviving children", x = "FPH", y = "DSS") +
+  labs(title = "Non-surviving children", x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.2, 4.2), xlim = c(-0.2, 4.2)) +
   theme_bw() +
   theme(
@@ -458,7 +384,7 @@ myplot1 <- plotDat %>%
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), 5, by = 1)) +
-  labs(title = unique(plotDat$outcome), x = "FPH", y = "DSS") +
+  labs(title = unique(plotDat$outcome), x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.1, 5.1), xlim = c(-0.1, 5.1)) +
   theme_bw() +
   theme(
@@ -477,7 +403,7 @@ myplot2 <- plotDat %>%
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
-  labs(title = unique(plotDat$outcome), x = "FPH", y = "DSS") +
+  labs(title = unique(plotDat$outcome), x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
   theme_bw() +
   theme(
@@ -496,7 +422,7 @@ myplot3 <- plotDat %>%
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   #scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), 7, by = 1)) +
-  labs(title = unique(plotDat$outcome), x = "FPH", y = "DSS") +
+  labs(title = unique(plotDat$outcome), x = "FPH", y = "HDSS") +
   #coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
   coord_cartesian(ylim = c(-0.1, 7.1), xlim = c(-0.1, 7.1)) +
   theme_bw() +
@@ -515,8 +441,8 @@ myplot4 <- plotDat %>%
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), 2, by = 1)) +
-  labs(title = unique(plotDat$outcome), x = "FPH", y = "DSS") +
-  coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
+  labs(title = unique(plotDat$outcome), x = "FPH", y = "HDSS") +
+  #coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
   theme_bw() +
   theme(
     panel.grid.major = element_blank(),
@@ -534,7 +460,7 @@ myplot5 <- plotDat %>%
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
-  labs(title = "Neonatal death", x = "FPH", y = "DSS") +
+  labs(title = "Neonatal death", x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.3, 3.3), xlim = c(-0.3, 3.3)) +
   theme_bw() +
   theme(
@@ -553,7 +479,7 @@ myplot6 <- plotDat %>%
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
-  labs(title = "Postneonatal death", x = "FPH", y = "DSS") +
+  labs(title = "Postneonatal death", x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
   theme_bw() +
   theme(
@@ -571,7 +497,7 @@ myplot7 <- plotDat %>%
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
-  labs(title = "1-4y death", x = "FPH", y = "DSS") +
+  labs(title = "1-4y death", x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
   theme_bw() +
   theme(
@@ -589,7 +515,7 @@ myplot8 <- plotDat %>%
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
-  labs(title = "5-9y death", x = "FPH", y = "DSS") +
+  labs(title = "5-9y death", x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.3, 1.3), xlim = c(-0.3, 1.3)) +
   theme_bw() +
   theme(
@@ -607,7 +533,7 @@ myplot9 <- plotDat %>%
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
-  labs(title = "Surviving children", x = "FPH", y = "DSS") +
+  labs(title = "Surviving children", x = "FPH", y = "HDSS") +
   #coord_cartesian(ylim = c(-0.1, 6.1), xlim = c(-0.1, 6.1)) +
   coord_cartesian(ylim = c(-0.2, 4.2), xlim = c(-0.2, 4.2)) +
   theme_bw() +
@@ -626,7 +552,7 @@ myplot10 <- plotDat %>%
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
-  labs(title = "Non-surviving children", x = "FPH", y = "DSS") +
+  labs(title = "Non-surviving children", x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.2, 4.2), xlim = c(-0.2, 4.2)) +
   theme_bw() +
   theme(
@@ -675,7 +601,7 @@ df_ind_agree <- df_n_sur %>%
   left_join(df_n_dss)
 # woman with 4 live births in survey and 2 in dss
 subset(df_ind_agree, n_sur == 4 & n_dss == 2)
-overall %>%
+dat %>%
   filter(rid_m == "3D93016009") %>% 
   select(match_n, rid_m, cid_m, 
          dob_m_dss, doi_m_dss, pregout_dss, name_c_dss, sex_c_dss, dob_c_dss, dod_c_dss, 
@@ -696,13 +622,14 @@ df_ind_agree <- df_n_sur %>%
   left_join(df_n_dss)
 # woman with 7 miscarriages in survey and 1 in dss
 subset(df_ind_agree, n_sur == 7 & n_dss == 1)
-overall %>%
+dat %>%
   filter(rid_m == "4V47035405") %>% 
   select(match_n, rid_m, cid_m, 
          dob_m_dss, doi_m_dss, pregout_dss, name_c_dss, sex_c_dss, dob_c_dss, dod_c_dss, 
-         c215, c216, c218, c219, c220, c223) %>%
-  as.data.frame()
-# she had 3 abortions and 1 miscarriage in dss
+         c215, c216, c218, c219, c220, c223, denomC) %>%
+  as.data.frame() %>%
+  filter(denomC == 1)
+# she had 2 abortions and 1 miscarriage in dss (during denomC period)
 # she had 6 miscarriages in fph
 
 
@@ -827,18 +754,27 @@ datTabAll <- rbind(datTabAllA, datTabAllB, datTabAllC)
 
 myplot <- datTabAll %>%
   filter(denom %in% c("A", "B", "C")) %>%
+  # mutate(denom = case_when(
+  #   denom == "A" ~ paste0("All-women (n = ", n_womA, ")"), #"All",
+  #   denom == "B" ~ paste0("Lifelong-resident (n = ",n_womB, ")"), #"Mothers: lifelong residents",
+  #   denom == "C" ~ paste0("Recent-pregnancies (n = ", n_womC, ")"), #"Mother+pregnancies: prev. 10 years",
+  #   TRUE ~ denom
+  # )) %>%
+  # mutate(denom = factor(denom, levels = c(paste0("All-women (n = ", n_womA, ")"),
+  #                                         paste0("Lifelong-resident (n = ",n_womB, ")"), # "Mothers: lifelong residents"
+  #                                         paste0("Recent-pregnancies (n = ", n_womC, ")")))) %>% # "Mother+pregnancies: prev. 10 years
   mutate(denom = case_when(
-    denom == "A" ~ paste0("All-women (n = ", n_womA, ")"), #"All",
-    denom == "B" ~ paste0("Lifelong-resident (n = ",n_womB, ")"), #"Mothers: lifelong residents",
-    denom == "C" ~ paste0("Recent-pregnancies (n = ", n_womC, ")"), #"Mother+pregnancies: prev. 10 years",
+    denom == "A" ~ "All-women", 
+    denom == "B" ~ "Lifelong-resident", 
+    denom == "C" ~ "Recent-pregnancies", 
     TRUE ~ denom
   )) %>%
-  mutate(denom = factor(denom, levels = c(paste0("All-women (n = ", n_womA, ")"),
-                                          paste0("Lifelong-resident (n = ",n_womB, ")"), # "Mothers: lifelong residents"
-                                          paste0("Recent-pregnancies (n = ", n_womC, ")")))) %>% # "Mother+pregnancies: prev. 10 years
+  mutate(denom = factor(denom, levels = c("All-women",
+                                          "Lifelong-resident", 
+                                          "Recent-pregnancies"))) %>% 
   pivot_longer(cols = c(n_sur, n_dss), names_to = "n") %>%
-  mutate(n = ifelse(n == "n_dss", "DSS", "FPH")) %>%
-  mutate(n = factor(n, levels = c("FPH", "DSS"))) %>%
+  mutate(n = ifelse(n == "n_dss", "HDSS", "FPH")) %>%
+  mutate(n = factor(n, levels = c("FPH", "HDSS"))) %>%
   mutate(outcome = factor(outcome, levels = rev(c("Pregnancy","Live birth",
        "Stillbirth","Miscarriage","Abortion","Neonatal death", "Postneonatal death",
        "1-4y death","5-9y death","Surviving children", "Non-surviving children")))) %>%
@@ -863,14 +799,14 @@ ggsave("./gen/figures/total-events-bysource.png", myplot, width = 8, height = 3.
 myplot <- datTabAll %>%
   filter(denom %in% c("A", "B", "C")) %>%
   mutate(denom = case_when(
-    denom == "A" ~ paste0("All-women (n = ", n_womA, ")"), #"All",
-    denom == "B" ~ paste0("Lifelong-resident (n = ",n_womB, ")"), #"Mothers: lifelong residents",
-    denom == "C" ~ paste0("Recent-pregnancies (n = ", n_womC, ")"), #"Mother+pregnancies: prev. 10 years",
+    denom == "A" ~ "All-women", 
+    denom == "B" ~ "Lifelong-resident", 
+    denom == "C" ~ "Recent-pregnancies", 
     TRUE ~ denom
   )) %>%
-  mutate(denom = factor(denom, levels = c(paste0("All-women (n = ", n_womA, ")"),
-                                          paste0("Lifelong-resident (n = ",n_womB, ")"), # "Mothers: lifelong residents"
-                                          paste0("Recent-pregnancies (n = ", n_womC, ")")))) %>%
+  mutate(denom = factor(denom, levels = c("All-women",
+                                          "Lifelong-resident", 
+                                          "Recent-pregnancies"))) %>% 
   mutate(reldif =  100 * (n_sur - n_dss)/n_dss) %>%
    mutate(outcome = factor(outcome, levels = rev(c("Pregnancy","Live birth",
        "Stillbirth","Miscarriage","Abortion","Neonatal death", "Postneonatal death",
@@ -878,7 +814,7 @@ myplot <- datTabAll %>%
   ggplot() +
   geom_bar(aes(x = outcome, y = reldif), stat = "identity") +
   geom_hline(aes(yintercept = 0), color = "red") +
-  labs(y = "Relative difference (reference = DSS)", x = "") +
+  labs(y = "Relative difference (reference = HDSS)", x = "") +
   facet_wrap(~denom, labeller = label_wrap_gen(40)) +
   coord_flip(
     #ylim = c(0, 3100)
@@ -920,12 +856,12 @@ datTabAll %>%
 # Numbers for sample -------------------------------------------------------
 
 
-datNum <- data.frame(subsample = c("all-pregnancies", "lifelong-residents", "recent-pregnancies"),
+datNum <- data.frame(subsample = c("all-women", "lifelong-residents", "recent-pregnancies"),
            nWomen = c(n_womA, n_womB, n_womC),
            nLb_dss = c(datLBa$n_dss, datLBb$n_dss, datLBc$n_dss),
            nLb_sur = c(datLBa$n_sur, datLBb$n_sur, datLBc$n_sur),
            nDth_dss = c(datDieda$n_dss, datDiedb$n_dss, datDiedc$n_dss),
            nDth_sur = c(datDieda$n_sur, datDiedb$n_sur, datDiedc$n_sur))
-
+datNum
 write.csv(datNum, "./gen/audit/num1.csv", row.names = FALSE)
          

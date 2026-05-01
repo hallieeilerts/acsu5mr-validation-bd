@@ -11,7 +11,7 @@ library(tidyr)
 library(dplyr)
 library(haven)
 #' Inputs
-overall <- readRDS("./gen/clean/overallDob-clean.rds")
+overall <- readRDS("./gen/clean/overallName-clean.rds")
 hdss <- readRDS("./gen/clean/hdss-clean.rds")
 survey <- readRDS("./gen/clean/survey-clean.rds")
 ################################################################################
@@ -478,4 +478,4 @@ overall_aug2 <- bind_rows(overall_aug1, survey_nomatch)
 
 # Save output(s) ----------------------------------------------------------
 
-saveRDS(overall_aug2, "./gen/augment/overallDob-aug.rds")
+saveRDS(overall_aug2, "./gen/augment/overallName-aug.rds")

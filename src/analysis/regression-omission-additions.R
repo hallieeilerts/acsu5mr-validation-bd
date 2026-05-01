@@ -17,8 +17,9 @@ library(modelsummary)
 library(marginaleffects)
 library(stringr)
 library(lme4)
+library(geepack)
 #' Inputs
-overall <- readRDS("./gen/augment/overallDob-recode.rds")
+overall <- readRDS("./gen/augment/overallName-recode.rds")
 ################################################################################
 
 ## Omissions
@@ -29,31 +30,33 @@ overall <- readRDS("./gen/augment/overallDob-recode.rds")
 # because no need for correct factor given survey practice of calculating rates 0-4, 5-9, 10-14
 # those for children 10+
 # because data is too sparse
-## Additions
-# Subsample: (C) recent-pregnancies
-# Denominator: deaths in FPH
 dat <- overall %>%
   mutate(subsampA = 1,
-         subsampC = ifelse(
+         subsampC_dss = ifelse(
            # mother's in-migration is more than 15 years ago, and
            as.numeric(as.Date(max(unique(overall$int_date_sur))) - doi_m_dss)/365.25 >= 15 & 
-             # dss dob is within past 15 years or
-             (!is.na(dob_c_dss) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - dob_c_dss)/365.25 <= 15 | 
-                # unmatched validation study dob is within past 15 years
-                (is.na(dob_c_dss) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - c220)/365.25 <= 15)), 
+             # dss dob is within past 15 years
+             (!is.na(dob_c_dss) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - dob_c_dss)/365.25 <= 15), 
+           1, 0),
+         subsampC_sur = ifelse(
+           # mother's in-migration is more than 15 years ago, and
+           as.numeric(as.Date(max(unique(overall$int_date_sur))) - doi_m_dss)/365.25 >= 15 & 
+             # validation study dob is within past 15 years
+             (!is.na(c220) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - c220)/365.25 <= 15), 
            1, 0),
          # deaths in dss
          eventDth_dss = ifelse(cstatus_dss == "Died", 1, 0),
          # deaths in survey
          eventDth_sur = ifelse(cstatus_sur == "Died", 1, 0),
+         # deaths in either source
+         eventDth = ifelse(eventDth_dss == 1 | eventDth_sur == 1, 1, 0),
          # deathrecency < 15 years ago
          happenedRecently = ifelse(deathrecency < 15, 1, 0),
          # children < 10y
          youngerChildren = ifelse(cstatus_agesp_comb != "10+", 1, 0),
          denomA = ifelse(subsampA == 1 & eventDth_dss == 1 & 
-                           happenedRecently == 1 & youngerChildren == 1, 1, 0) ,
-         denomC = ifelse(subsampC == 1 & eventDth_sur == 1, 1, 0)
-  ) 
+                           happenedRecently == 1 & youngerChildren == 1, 1, 0),
+         denomC = ifelse((subsampC_dss == 1 | subsampC_sur == 1) & eventDth_sur == 1, 1, 0))
 
 
 # Regression: omission ----------------------------------------------------
@@ -77,6 +80,7 @@ datDth$cstrata_ac <- factor(datDth$cstrata_ac,
                                        "1-4 year (other)", "1-4 year (drowning)" ,
                                        "5-9 year"))
 datDth$cod_cat <- factor(datDth$cod_cat, levels = c("other", "leading"))
+datDth$rid_m <- as.factor(datDth$rid_m)
 
 # dataset without 5-9 for when grouping leading and other
 datDthyoung <- datDth %>% filter(!(cstatus_agesp_comb %in% c("5-9"))) %>%
@@ -87,16 +91,24 @@ m1 <- glm(omission ~ 1, data = datDth, family = binomial())
 # age is the main predictor of interest
 m2 <- glm(omission ~ cstatus_agesp_comb, data = datDth, family = binomial())
 # add controls to age model - does age effect hold after adjustment?
-m3 <- glm(omission ~ cstatus_agesp_comb + deathrecency_cat + magecat2_int, data = datDth, family = binomial())
+#m3 <- glm(omission ~ cstatus_agesp_comb + deathrecency_cat + magecat2_int, data = datDth, family = binomial())
+m3 <- geeglm(omission ~ cstatus_agesp_comb + deathrecency_cat + magecat2_int, data = datDth,
+             id = rid_m, family = binomial(link = "logit"))
 # add cause to adjusted age model - does cause add anything?
-m4 <- glm(omission ~ cstatus_agesp_comb + cod_cat + deathrecency_cat + magecat2_int, 
-          data = datDth, family = binomial())
+# m4 <- glm(omission ~ cstatus_agesp_comb + cod_cat + deathrecency_cat + magecat2_int, 
+#           data = datDth, family = binomial())
+m4 <- geeglm(omission ~ cstatus_agesp_comb + cod_cat + deathrecency_cat + magecat2_int, data = datDth,
+             id = rid_m, family = binomial(link = "logit"))
 # test whether cause interacts with age (binary cause)
-m5 <- glm(omission ~ cstatus_agesp_comb * cod_cat + deathrecency_cat + magecat2_int, 
+m5 <- glm(omission ~ cstatus_agesp_comb * cod_cat + deathrecency_cat + magecat2_int,
           data = datDth, family = binomial())
+# m5 <- geeglm(omission ~ cstatus_agesp_comb * cod_cat + deathrecency_cat + magecat2_int, data = datDth,
+#              id = rid_m, family = binomial(link = "logit"))
 # test whether specific causes within age groups matter
-m6 <- glm(omission ~ cstrata_ac + deathrecency_cat + magecat2_int, 
-          data = datDth, family = binomial())
+# m6 <- glm(omission ~ cstrata_ac + deathrecency_cat + magecat2_int, 
+#           data = datDth, family = binomial())
+m6 <- geeglm(omission ~ cstrata_ac + deathrecency_cat + magecat2_int, data = datDth,
+             id = rid_m, family = binomial(link = "logit"))
 
 anova(m1, m2, test = "Chisq")  # does age matter?
 anova(m2, m3, test = "Chisq")  # do controls matter?
@@ -118,8 +130,8 @@ modelsO <- list("Model 1" = m1,
 tabMod <- msummary(modelsO, output = "data.frame", stars = TRUE, fmt = 2)  %>%
   mutate(group = case_when(
     str_detect(term, "Intercept") ~ "Intercept",
-    str_detect(term, "^cstatus_agesp_comb(?!.*×)") ~ "Age of death (ref: Neonatal)",
-    str_detect(term, "deathrecency") ~ "Death recency (ref: 0-4)",
+    str_detect(term, "^cstatus_agesp_comb(?!.*×)") ~ "Age-at-death (ref: Neonatal)",
+    str_detect(term, "deathrecency") ~ "Recall period of death (ref: 0-4 years)",
     str_detect(term, "magecat2") ~ "Mother age (ref: 15-24)",
     str_detect(term, "cstatus_agesp_combPostneonatal × cod_catleading") ~ 
       "Age of death  x Cause group",
@@ -191,6 +203,7 @@ unique(datDth$deathrecency_cat)
 datDth$deathrecency_cat <- factor(datDth$deathrecency_cat, levels = c("0-4", "5-9", "10-14"))
 unique(datDth$cstatus_agesp_comb)
 datDth$cstatus_agesp_comb <- factor(datDth$cstatus_agesp_comb, levels = c("Neonatal", "Postneonatal", "1-4", "5-9"))
+datDth$rid_m <- as.factor(datDth$rid_m)
 
 # dataset without 5-9 for when grouping leading and other
 datDthyoung <- datDth %>% filter(!(cstatus_agesp_comb %in% c("5-9"))) %>%
@@ -201,7 +214,9 @@ m1 <- glm(addition ~ 1, data = datDth, family = binomial())
 # age is the main predictor of interest
 m2 <- glm(addition ~ cstatus_agesp_comb, data = datDth, family = binomial())
 # add controls to age model - does age effect hold after adjustment?
-m3 <- glm(addition ~ cstatus_agesp_comb + deathrecency_cat + magecat2_int, data = datDth, family = binomial())
+#m3 <- glm(addition ~ cstatus_agesp_comb + deathrecency_cat + magecat2_int, data = datDth, family = binomial())
+m3 <- geeglm(addition ~ cstatus_agesp_comb + deathrecency_cat + magecat2_int, data = datDth,
+             id = rid_m, family = binomial(link = "logit"))
 
 anova(m1, m2, test = "Chisq")  # does age matter?
 anova(m2, m3, test = "Chisq")  # do controls matter? yes
@@ -217,8 +232,8 @@ modelsA <- list("Model 1" = m1,
 tabMod <- msummary(modelsA, output = "data.frame", stars = TRUE, fmt = 2) %>%
   mutate(group = case_when(
     str_detect(term, "Intercept") ~ "Intercept",
-    str_detect(term, "^cstatus_agesp_comb(?!.*×)") ~ "Age of death (ref: Neonatal)",
-    str_detect(term, "deathrecency") ~ "Death recency (ref: 0-4)",
+    str_detect(term, "^cstatus_agesp_comb(?!.*×)") ~ "Age-at-death (ref: Neonatal)",
+    str_detect(term, "deathrecency") ~ "Recall period of death (ref: 0-4 years)",
     str_detect(term, "magecat2") ~ "Mother age (ref: 15-24)",
     TRUE ~ "Other"
   ),
@@ -259,12 +274,14 @@ tabMod <- tabModO %>% select(-c(term)) %>%
   left_join(tabModA %>% select(-c(term)), by = c("part", "statistic", "group", "level"))
 
 ft <- tabMod %>%
-  dplyr::select(group, level, `Model 1.x`, `Model 2.x`, `Model 3.x`, `Model 4`, `Model 5`, `Model 6`,
-                `Model 1.y`, `Model 2.y`, `Model 3.y`) %>%
+  #dplyr::select(group, level, `Model 1.x`, `Model 2.x`, `Model 3.x`, `Model 4`, `Model 5`, `Model 6`,
+  #              `Model 1.y`, `Model 2.y`, `Model 3.y`) %>%
+  dplyr::select(group, level, `Model 3.x`, `Model 4`, `Model 5`, `Model 6`,`Model 3.y`) %>%
   rename(Variable = group) %>%
   rename(Value = level) %>%
   flextable() %>%
-  add_header_row(values = c(" ","Omission", "Addition"), colwidths = c(2, 6, 3)) %>%
+  #add_header_row(values = c(" ","Omission", "Addition"), colwidths = c(2, 6, 3)) %>%
+  add_header_row(values = c(" ","Omission", "Addition"), colwidths = c(2, 4, 1)) %>%
   merge_v(j = ~ Variable + Value) %>%
   set_caption(caption = "Logistic regression") %>%
   flextable::fontsize(size = 9, part = "all") %>%
@@ -280,7 +297,9 @@ output_path <- here::here("gen/figures", "table-regression-dths.docx")
 print(doc, target = output_path)
 cat("Saved to:", output_path, "\n")
 
-# Sensitivity table -------------------------------------------------------
+
+# Correction factor table -------------------------------------------------
+
 
 predO <- avg_predictions(m3O, variables = c("cstatus_agesp_comb", "deathrecency_cat"))
 predA <- avg_predictions(m3A, variables = c("cstatus_agesp_comb", "deathrecency_cat"))
@@ -319,9 +338,16 @@ tabPred <- tabPredO %>%
          outcome_lb.y = ifelse(outcome_lb.y < 0, 0, outcome_lb.y),
          sens_upper.x = ifelse(sens_ub.x > 1 ,1 , sens_ub.x),
          sens_upper.y = ifelse(sens_ub.y > 1 ,1 , sens_ub.y)) %>%
-  mutate(cf = (1 - outcome.y)/(1 - outcome.x),
-         cf_lb = (1 - outcome_ub.y)/(1 - outcome_ub.x), 
-         cf_ub = (1 - outcome_lb.y)/(1 - outcome_lb.x)) %>% 
+ # mutate(cf = (1 - outcome.y)/(1 - outcome.x),
+  #       cf_lb = (1 - outcome_ub.y)/(1 - outcome_ub.x), 
+  #       cf_ub = (1 - outcome_lb.y)/(1 - outcome_lb.x)) %>% 
+  mutate(
+    cf = (1 - outcome.y)/(1 - outcome.x),
+    cf_calc1 = (1 - outcome_ub.y) / (1 - outcome_ub.x),
+    cf_calc2 = (1 - outcome_lb.y) / (1 - outcome_lb.x),
+    cf_lb = pmin(cf_calc1, cf_calc2),
+    cf_ub = pmax(cf_calc1, cf_calc2)
+  ) %>%
   mutate(cf = cf/100,
          cf_lb = cf_lb/100,
          cf_ub = cf_ub/100) %>% # divide by 100 before next step
@@ -330,48 +356,29 @@ tabPred <- tabPredO %>%
          outcome_ci.y = paste0("(", outcome_lb.y, ", ", outcome_ub.y, ")"),
          cf_ci = paste0("(", cf_lb, ", ", cf_ub, ")"))
 
+tabPred %>%
+  filter(cstatus_agesp_comb == "5-9")
+
 ft <- tabPred %>%
   dplyr::select(cstatus_agesp_comb, deathrecency_cat, 
                 outcome.x, outcome_ci.x, outcome.y, outcome_ci.y, cf, cf_ci) %>%
   flextable() %>%
   merge_v(j = ~ cstatus_agesp_comb + deathrecency_cat) %>%
-  set_header_labels(values = c("Age of death", "Death recency (years)", "%", "CI", "%", "CI", "%", "CI")) %>%
-  add_header_row(values = c(" ","Omission", "Addition", "Correction factor"), colwidths = c(2, 2, 2,2)) %>%
+  set_header_labels(values = c("Age-at-death", "Recall period of death (years)", "%", "CI", "%", "CI", "%", "CI")) %>%
+  add_header_row(values = c(" ","Omission", "Addition", "Correction factor"), colwidths = c(2, 2, 2, 2)) %>%
   set_caption(caption = "Predicted probabilities of omission and addition and correction factors.") %>%
   flextable::fontsize(size = 9, part = "all") %>%
   flextable::font(fontname = "Times New Roman", part = "all") %>%
-  autofit() 
-ft
-
-
-
-myres <- myres %>% 
-  mutate(omission_lower = ifelse(omission_lower < 0, 0, omission_lower),
-         sens_upper = ifelse(sens_upper >1 ,1 , sens_upper)) %>%
-  mutate(across(where(is.numeric), ~ sprintf("%.2f", .x * 100))) %>%
-  mutate(omission_bound = paste0("(", omission_lower, ", ", omission_upper, ")"))%>%
-  mutate(sens_bound = paste0("(", sens_lower, ", ", sens_upper, ")")) %>%
-  dplyr::select(cstatus_agesp_comb, birthrecency_cat, omission, omission_bound, sensitivity, sens_bound)
-
-
-ft <- myres %>%
-  dplyr::select(cstatus_agesp_comb, birthrecency_cat, omission, omission_bound, sensitivity, sens_bound) %>%
-  filter(birthrecency_cat != "15+") %>%
-  flextable() %>%
-  merge_v(j = ~ cstatus_agesp_comb + birthrecency_cat) %>%
-  set_header_labels(values = c("Age of death", "Birth recency (years)", "%", "CI", "%", "CI")) %>%
-  add_header_row(values = c(" ","Omission", "Sensitivity"), colwidths = c(2, 2, 2)) %>%
-  set_caption(caption = "Logistic regression on DSS deaths omitted from FPH") %>%
-  flextable::fontsize(size = 9, part = "all") %>%
-  flextable::font(fontname = "Times New Roman", part = "all") %>%
-  autofit() 
+  autofit() %>%
+  align(align = "right", j = 2:8, part = "all") %>%
+  align(align = "left", j = 1, part = "all")
 ft
 
 doc <- read_docx() %>%
   body_add_par("Table 1", style = "heading 1") %>%
   body_add_flextable(ft)
 
-output_path <- here::here("gen/figures", "table-sensitivity-dths-omissions.docx")
+output_path <- here::here("gen/figures", "table-correction-fac.docx")
 print(doc, target = output_path)
 cat("Saved to:", output_path, "\n")
 
