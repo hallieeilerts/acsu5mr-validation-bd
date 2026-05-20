@@ -455,3 +455,246 @@ doc <- read_docx() %>%
 output_path <- here::here("gen/figures", "table-dths-additionsOmissions-char.docx")
 print(doc, target = output_path)
 cat("Saved to:", output_path, "\n")
+
+
+# PAA figure: omissions by COD --------------------------------------------
+
+vars <- c(
+  "birthorder_cat_comb", "paritymaxcat_comb", "birthrecency_cat", "deathrecency_cat",
+  "magecat2_int", "hhsizecat_sur", "hhassets_sur", 
+  "intinterupt_sur", "observer_sur", "intcoop_sur", "breakdown_sur",
+  "cstatus_agesp_comb", "cstrata_ac"
+)
+
+datDth <- dat %>%
+  filter(denomA == 1) %>%
+  mutate(type = case_when(
+    type == "HDSS_NoMatch" ~ "Omission", # reported in hdss, omission from validation study
+    type == "VS_Match" ~ "Match",
+    TRUE ~ NA
+  ))  %>% 
+  select(type, all_of(vars)) 
+
+# create counts and percentages
+figDat <- datDth %>%
+  pivot_longer(
+    cols = -type,
+    names_to = "variable",
+    values_to = "value"
+  ) %>%
+  count(variable, value, type) %>%
+  group_by(variable, value) %>%
+  mutate(per = n / sum(n)*100) %>% 
+  pivot_longer(
+    cols = c(n, per),
+    names_to = "name",
+    values_to = "metric_value"
+  ) %>%
+  mutate(name = ifelse(name == "n", "N", "%")) %>%
+  mutate(name = factor(name, levels = c("N", "%"))) 
+totals <- figDat %>%
+  filter(name == "N") %>%
+  group_by(variable, value) %>%
+  summarise(total = sum(metric_value), .groups = "drop") %>%
+  mutate(name = "N") %>%
+  mutate(name = factor(name, levels = c("N", "%")))
+
+# Limit to cstrata_ac
+figDat1 <- figDat %>%
+  filter(variable == "cstrata_ac") %>%
+  mutate(value = factor(value, levels = c(
+    "10+", "5-9 year","1-4 year (other)","1-4 year (drowning)", "Postneonatal (other)",
+    "Postneonatal (RI+con)", "Neonatal (other)","Neonatal (birth asphyxia)"),
+    labels = c("10+", "5-9 year","1-4 year - other","1-4 year - drowning", "Postneonatal - other",
+               "Postneonatal - RI+con", "Neonatal - other","Neonatal - birth asphyxia")
+  ))
+totals1 <- totals %>%
+  filter(variable == "cstrata_ac") %>%
+  mutate(value = factor(value, levels = c(
+    "10+", "5-9 year","1-4 year (other)","1-4 year (drowning)", "Postneonatal (other)",
+    "Postneonatal (RI+con)", "Neonatal (other)","Neonatal (birth asphyxia)"),
+    labels = c("10+", "5-9 year","1-4 year - other","1-4 year - drowning", "Postneonatal - other",
+               "Postneonatal - RI+con", "Neonatal - other","Neonatal - birth asphyxia")))
+
+myplot <- figDat1 %>%
+  mutate(type = factor(type, levels = c("Omission", "Match"))) %>%
+  mutate(label = ifelse(name == "N", metric_value, round(metric_value, 1))) %>%
+  ggplot() +
+  geom_bar(aes(x = value, y = metric_value, fill = type), stat = "identity", position = "stack") +
+  geom_text(
+    data = totals1,
+    aes(x = value, y = total, label = total),
+    hjust = -0.05,
+    size = 4
+  ) +
+  geom_text(
+    data = ~subset(.x, name == "%"),
+    aes(x = value, y = metric_value, label = label, group = type),
+    position = position_stack(vjust = 0.5),
+    size = 4,
+    color = "white"
+  ) +
+  coord_flip() +
+  facet_wrap(~name, nrow = 2, scales = "free_x") +
+  labs(x = "", y = "", title = "") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  scale_fill_viridis_d(option = "plasma", direction = -1, begin = 0.1, end = 0.45, name = "") +
+  theme(legend.position = "bottom", text = element_text(size = 18)) +
+  guides(fill = guide_legend(reverse = TRUE))
+ggsave("./gen/figures/paa/matching-aw-cod.png", myplot, width = 6, height = 6, dpi = 500)
+
+figDat1 <- figDat %>%
+  filter(variable == "deathrecency_cat") %>%
+  mutate(value = factor(value, levels = c("15+", "10-14","5-9", "0-4")))
+totals1 <- totals %>%
+  filter(variable == "deathrecency_cat") %>%
+  mutate(value = factor(value, levels = c("15+", "10-14","5-9", "0-4")))
+myplot <- figDat1 %>%
+  mutate(type = factor(type, levels = c("Omission", "Match"))) %>%
+  mutate(label = ifelse(name == "N", metric_value, round(metric_value, 1))) %>%
+  ggplot() +
+  geom_bar(aes(x = value, y = metric_value, fill = type), stat = "identity", position = "stack") +
+  geom_text(
+    data = totals1,
+    aes(x = value, y = total, label = total),
+    hjust = -0.05,
+    size = 4
+  ) +
+  geom_text(
+    data = ~subset(.x, name == "%"),
+    aes(x = value, y = metric_value, label = label, group = type),
+    position = position_stack(vjust = 0.5),
+    size = 4,
+    color = "white"
+  ) +
+  coord_flip() +
+  facet_wrap(~name, nrow = 2, scales = "free_x") +
+  labs(x = "", y = "", title = "") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  scale_fill_viridis_d(option = "plasma", direction = -1, begin = 0.1, end = 0.45, name = "") +
+  theme(legend.position = "bottom", text = element_text(size = 18)) +
+  guides(fill = guide_legend(reverse = TRUE))
+myplot
+ggsave("./gen/figures/paa/matching-aw-recalld.png", myplot, width = 6, height = 6, dpi = 500)
+
+
+figDat1 <- figDat %>%
+  filter(variable == "magecat2_int") %>%
+  mutate(value = factor(value, levels = c("45+", "40-44","35-39", "30-34", "25-29", "15-24")))
+totals1 <- totals %>%
+  filter(variable == "magecat2_int") %>%
+  mutate(value = factor(value, levels = c("45+", "40-44","35-39", "30-34", "25-29", "15-24")))
+myplot <- figDat1 %>%
+  mutate(type = factor(type, levels = c("Omission", "Match"))) %>%
+  mutate(label = ifelse(name == "N", metric_value, round(metric_value, 1))) %>%
+  ggplot() +
+  geom_bar(aes(x = value, y = metric_value, fill = type), stat = "identity", position = "stack") +
+  geom_text(
+    data = totals1,
+    aes(x = value, y = total, label = total),
+    hjust = -0.05,
+    size = 4
+  ) +
+  geom_text(
+    data = ~subset(.x, name == "%"),
+    aes(x = value, y = metric_value, label = label, group = type),
+    position = position_stack(vjust = 0.5),
+    size = 4,
+    color = "white"
+  ) +
+  coord_flip() +
+  facet_wrap(~name, nrow = 2, scales = "free_x") +
+  labs(x = "", y = "", title = "") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  scale_fill_viridis_d(option = "plasma", direction = -1, begin = 0.1, end = 0.45, name = "") +
+  theme(legend.position = "bottom", text = element_text(size = 18)) +
+  guides(fill = guide_legend(reverse = TRUE))
+myplot
+ggsave("./gen/figures/paa/matching-aw-motherage.png", myplot, width = 6, height = 6, dpi = 500)
+
+figDat1 <- figDat %>%
+  filter(variable == "intcoop_sur") %>%
+  mutate(value = factor(value, levels = c("Very good", "Good", "Normal")))
+totals1 <- totals %>%
+  filter(variable == "intcoop_sur") %>%
+  mutate(value = factor(value, levels = c("Very good", "Good", "Normal")))
+myplot <- figDat1 %>%
+  mutate(type = factor(type, levels = c("Omission", "Match"))) %>%
+  mutate(label = ifelse(name == "N", metric_value, round(metric_value, 1))) %>%
+  ggplot() +
+  geom_bar(aes(x = value, y = metric_value, fill = type), stat = "identity", position = "stack") +
+  geom_text(
+    data = totals1,
+    aes(x = value, y = total, label = total),
+    hjust = -0.05,
+    size = 4
+  ) +
+  geom_text(
+    data = ~subset(.x, name == "%"),
+    aes(x = value, y = metric_value, label = label, group = type),
+    position = position_stack(vjust = 0.5),
+    size = 4,
+    color = "white"
+  ) +
+  coord_flip() +
+  facet_wrap(~name, nrow = 2, scales = "free_x") +
+  labs(x = "", y = "", title = "") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  scale_fill_viridis_d(option = "plasma", direction = -1, begin = 0.1, end = 0.45, name = "") +
+  theme(legend.position = "bottom", text = element_text(size = 18)) +
+  guides(fill = guide_legend(reverse = TRUE))
+myplot
+ggsave("./gen/figures/paa/matching-aw-coop.png", myplot, width = 6, height = 6, dpi = 500)
+
+
+# combined percents figures
+figDat1 <- figDat %>%
+  filter(variable %in% c("cstatus_agesp_comb", "cstrata_ac", "deathrecency_cat", "magecat2_int", "intcoop_sur")) %>%
+  filter(!(variable == "cstrata_ac" & value %in% c("10+", "5-9 year"))) %>%
+  mutate(value = case_when(
+    variable == "cstatus_agesp_comb" & value == "5-9" ~ "5-9y",
+    variable == "cstatus_agesp_comb" & value == "1-4" ~ "1-4y",
+    variable == "cstatus_agesp_comb" & value == "10+" ~ "10+",
+    TRUE ~ value
+  )) %>%
+  mutate(value = factor(value, levels = c(
+    "10+", 
+    "5-9y", "1-4y", "Postneonatal", "Neonatal",
+    #"5-9 year", 
+    "1-4 year (other)","1-4 year (drowning)", "Postneonatal (other)",
+    "Postneonatal (RI+con)", "Neonatal (other)","Neonatal (birth asphyxia)",
+               "15+", "10-14", "5-9", "0-4",
+               "45+", "40-44","35-39", "30-34", "25-29", "15-24",
+               "Very good", "Good", "Normal")
+  )) %>%
+  filter(name == "%") %>%
+  mutate(label = round(metric_value, 0)) %>%
+  mutate(variable = case_when(
+    variable == "cstatus_agesp_comb" ~ "Age at death; p=0.03", 
+    variable == "cstrata_ac" ~ "COD; p=0.13",
+    variable == "deathrecency_cat" ~ "Recall period of death (years); p<0.01",
+    variable == "magecat2_int" ~ "Mother's age; p<0.01",
+    variable == "intcoop_sur" ~ "Respondent cooperation; p<0.01"
+  ))
+myplot <- figDat1 %>%
+  mutate(type = factor(type, levels = c("Omission", "Match"))) %>%
+  ggplot() +
+  geom_bar(aes(x = value, y = metric_value, fill = type), stat = "identity", position = "stack") +
+  geom_text(
+    data = ~subset(.x, name == "%"),
+    aes(x = value, y = metric_value, label = label, group = type),
+    position = position_stack(vjust = 0.5),
+    size = 4,
+    color = "white"
+  ) +
+  coord_flip() +
+  facet_wrap(~variable, nrow = 2, scales = "free_y", labeller = label_wrap_gen(width = 30)) +
+  labs(x = "", y = "", title = "") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  scale_fill_viridis_d(option = "plasma", direction = -1, begin = 0.1, end = 0.45, name = "") +
+  theme(legend.position = "bottom", text = element_text(size = 18),
+        rect = element_rect(fill = "transparent")) +
+  guides(fill = guide_legend(reverse = TRUE))
+myplot
+ggsave("./gen/figures/paa/matching-aw-all.png", myplot, width = 12, height = 6, dpi = 500)
+

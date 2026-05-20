@@ -294,134 +294,7 @@ tabComb3 <- tabComb %>%
   select(subsample, everything())
 
 
-# Figure ------------------------------------------------------------------
-
-figdat <- tabComb1 %>%
-  rename(cstatus_agesp_comb = cstatus_agesp_dss) %>%
-  bind_rows(tabComb2) %>%
-  bind_rows(tabComb3) 
-
-figdat1 <- figdat %>%
-  select(subsample, type, n_dth) %>%
-  mutate(cstatus_agesp_comb = "Total",
-         xaxis = "all") %>%
-  rename(n = n_dth) %>%
-  distinct() %>%
-  filter(type != "Total")
-figdat2 <- figdat %>%
-  select(subsample, type, n, cstatus_agesp_comb) %>%
-  mutate(xaxis = cstatus_agesp_comb) %>%
-  filter(type != "Total")
-figdat3 <- figdat1 %>%
-  bind_rows(figdat2) %>%
-  mutate(xaxis = factor(xaxis, levels = c("10+", "5-9", "1-4", "Postneonatal", "Neonatal", "all"),
-                        labels = c("10+ years", "5-9 years", "1-4 years", "Postneonatal", "Neonatal", "Total"))) %>%
-  mutate(type = factor(type, levels = c("Addition", "Omission", "Match")))
-p1 <- figdat3 %>%
-  ggplot() +
-  geom_bar(aes(x = xaxis, y = n, fill = type), stat = "identity", position = "stack") +
-  coord_flip() +
-  facet_wrap(~subsample) +
-  scale_fill_viridis_d(option = "plasma", direction = -1) +
-  labs(y = "N", x = "") +
-  theme(legend.title = element_blank(), legend.position = "none")
-p2 <- figdat3 %>%
-  group_by(subsample, xaxis) %>%
-  mutate(tot = sum(n)) %>%
-  mutate(per = n/tot) %>%
-  ggplot() +
-  geom_bar(aes(x = xaxis, y = per*100, fill = type), stat = "identity", position = "stack") +
-  coord_flip() +
-  facet_wrap(~subsample) +
-  scale_fill_viridis_d(option = "plasma", direction = -1) +
-  labs(y = "%", x = "") +
-  theme(legend.title = element_blank(), legend.position = "bottom")  +
-  guides(fill = guide_legend(reverse = TRUE))
-
-ggsave("./gen/figures/fig-ommissionsAdditions.png", p1, width = 8, height = 3.5, dpi = 500)
-ggsave("./gen/figures/fig-ommissionsAdditions-rel.png", p2, width = 8, height = 3.5, dpi = 500)
-
-p1 <- figdat1  %>%
-  mutate(type = factor(type, levels = c("Match", "Omission", "Addition"))) %>%
-  ggplot() +
-  geom_bar(aes(x = subsample, y = n, fill = type), stat = "identity", position = "stack") +
-  scale_fill_viridis_d(option = "plasma", direction = -1) +
-  labs(x = "", y = "N") 
-p2 <- figdat1  %>%
-  group_by(subsample) %>%
-  mutate(tot = sum(n), per = n/tot*100) %>%
-  mutate(type = factor(type, levels = c("Match", "Omission", "Addition"))) %>%
-  ggplot() +
-  geom_bar(aes(x = subsample, y = per, fill = type), stat = "identity", position = "stack") +
-  scale_fill_viridis_d(option = "plasma", direction = -1) +
-  labs(x = "", y = "%") 
-p3 <- figdat3 %>%
-  group_by(subsample, type) %>%
-  mutate(tot = sum(n)) %>%
-  mutate(per = n/tot) %>%
-  filter(xaxis != "Total") %>%
-  mutate(type = factor(type, levels = c("Match", "Omission", "Addition"))) %>%
-  ggplot() +
-  geom_bar(aes(x = type, y = per*100*2, fill = xaxis), stat = "identity", position = "stack") +
-  facet_wrap(~subsample) +
-  scale_fill_viridis_d(option = "plasma", direction = -1) +
-  labs(y = "%", x = "") +
-  theme(legend.title = element_blank(), legend.position = "bottom")  +
-  guides(fill = guide_legend(reverse = TRUE))
-library(gridExtra)
-grid.arrange(p1, p2, p3, nrow = 1)
-
-
-
-## These are the ones i use
-
-# first figure
-figdat1 <- figdat %>% 
-  select(subsample, type, n_dth, per_dth) %>%
-  distinct() %>%
-  filter(type != "Total") %>%
-  pivot_longer(cols = c(n_dth, per_dth)) %>%
-  mutate(type = factor(type, levels = c("Match", "Omission", "Addition")))
-p1 <- figdat1 %>%
-  filter(name == "n_dth") %>%
-  ggplot() +
-  geom_bar(aes(x = subsample, y = value, fill = type), stat = "identity", position = "stack") +
-  scale_fill_viridis_d(option = "plasma", direction = -1) +
-  labs(x = "", y = "N") 
-p2 <- figdat1 %>%
-  filter(name == "per_dth") %>%
-  ggplot() +
-  geom_bar(aes(x = subsample, y = value, fill = type), stat = "identity", position = "stack") +
-  scale_fill_viridis_d(option = "plasma", direction = -1) +
-  labs(x = "", y = "%") 
-library(patchwork)
-p1comb <- (p1 | p2) +
-  plot_layout(guides = "collect") &   
-  plot_annotation(title = element_text("...")) &
-  theme(legend.position = "bottom", legend.title = element_blank()) 
-ggsave("./gen/figures/fig-om-ad.png", p1comb, width = 6, height = 3.5, dpi = 300)
-
-# second figure
-figdat2 <-  figdat %>%
-  mutate(cstatus_agesp_comb = factor(cstatus_agesp_comb, levels = c("10+", "5-9", "1-4", "Postneonatal", "Neonatal"),
-                        labels = c("10+ years", "5-9 years", "1-4 years", "Postneonatal", "Neonatal"))) %>%
-  filter(type != "Total") %>%
-  mutate(type = factor(type, levels = c("Match", "Omission", "Addition"))) %>%
-  select(subsample, type, cstatus_agesp_comb, per)
-p2 <- figdat2 %>%
-  ggplot() +
-  geom_bar(aes(x = type, y = per, fill = cstatus_agesp_comb), stat = "identity", position = "stack") +
-  facet_wrap(~subsample) +
-  scale_fill_viridis_d(option = "plasma", direction = -1) +
-  labs(y = "%", x = "") +
-  theme(legend.title = element_blank(), legend.position = "bottom")  +
-  guides(fill = guide_legend(reverse = TRUE))
-ggsave("./gen/figures/fig-ommissionsAdditions-rel.png", p2, width = 8, height = 3.5, dpi = 500)
-
-
-
-
-# Version 3 figs ----------------------------------------------------------
+# Create figure dat -------------------------------------------------------
 
 figdatA1 <- dat %>%
   filter(denomAlb == 1) %>%
@@ -572,6 +445,11 @@ totals <- allfigdat %>%
   summarise(total = sum(value), .groups = "drop") %>%
   mutate(name = "N") %>%
   mutate(name = factor(name, levels = c("N", "%")))
+
+
+# Figure: matches, omissions, and additions -------------------------------
+
+
 myplot <- allfigdat %>%
   mutate(event = factor(event, levels = c("Child died", "Child surviving", "Live births"))) %>%
   mutate(type = factor(type, levels = c("Addition", "Omission", "Match"))) %>%
@@ -599,6 +477,127 @@ myplot <- allfigdat %>%
   theme(legend.position = "bottom")
 myplot
 ggsave("./gen/figures/fig-matching.png", myplot, width = 8, height = 5, dpi = 500)
+
+
+# PAA figure: matching, omissions, additions ------------------------------
+
+allfigdat <- figdatA
+allfigdat$name <- ifelse(allfigdat$name == "n", "N", "%")
+allfigdat$name <- factor(allfigdat$name, levels = c("N", "%"))
+totals <- allfigdat %>%
+  filter(name == "N") %>%
+  group_by(subsample, event) %>%
+  summarise(total = sum(value), .groups = "drop") %>%
+  mutate(name = "N") %>%
+  mutate(name = factor(name, levels = c("N", "%")))
+myplot <- allfigdat %>%
+  mutate(event = factor(event, levels = c("Child died", "Child surviving", "Live births"))) %>%
+  mutate(type = factor(type, levels = c("Addition", "Omission", "Match"))) %>%
+  mutate(label = ifelse(name == "N", value, round(value, 1))) %>%
+  ggplot() +
+  geom_bar(aes(x = event, y = value, fill = type), stat = "identity", position = "stack") +
+  geom_text(
+    data = totals,
+    aes(x = event, y = total, label = total),
+    hjust = -0.05,
+    size = 4
+  ) +
+  geom_text(
+    data = ~subset(.x, name == "%"),
+    aes(x = event, y = value, label = label, group = type),
+    position = position_stack(vjust = 0.5),
+    size = 4,
+    color = "white"
+  ) +
+  coord_flip() +
+  facet_wrap(~ name, nrow = 2, scales = "free_x") +
+  labs(x = "", y = "", title = "") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  scale_fill_viridis_d(option = "plasma", direction = -1, begin = 0.1, end = 0.45, name = "") +
+  theme(legend.position = "bottom", text = element_text(size = 18)) +
+  guides(fill = guide_legend(reverse = TRUE))
+myplot
+
+ggsave("./gen/figures/paa/matching-aw.png", myplot, width = 6, height = 6, dpi = 500)
+
+
+allfigdat <- figdatC
+allfigdat$name <- ifelse(allfigdat$name == "n", "N", "%")
+allfigdat$name <- factor(allfigdat$name, levels = c("N", "%"))
+totals <- allfigdat %>%
+  filter(name == "N") %>%
+  group_by(subsample, event) %>%
+  summarise(total = sum(value), .groups = "drop") %>%
+  mutate(name = "N") %>%
+  mutate(name = factor(name, levels = c("N", "%")))
+myplot <- allfigdat %>%
+  mutate(event = factor(event, levels = c("Child died", "Child surviving", "Live births"))) %>%
+  mutate(type = factor(type, levels = c("Addition", "Omission", "Match"))) %>%
+  mutate(label = ifelse(name == "N", value, round(value, 1))) %>%
+  ggplot() +
+  geom_bar(aes(x = event, y = value, fill = type), stat = "identity", position = "stack") +
+  geom_text(
+    data = totals,
+    aes(x = event, y = total, label = total),
+    hjust = -0.05,
+    size = 4
+  ) +
+  geom_text(
+    data = ~subset(.x, name == "%"),
+    aes(x = event, y = value, label = label, group = type),
+    position = position_stack(vjust = 0.5),
+    size = 4,
+    color = "white"
+  ) +
+  coord_flip() +
+  facet_wrap(~ name, nrow = 2, scales = "free_x") +
+  labs(x = "", y = "", title = "") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  scale_fill_viridis_d(option = "plasma", direction = -1, begin = 0.1, end = 0.8, name = "") +
+  theme(legend.position = "bottom", text = element_text(size = 18)) +
+  guides(fill = guide_legend(reverse = TRUE))
+myplot
+
+ggsave("./gen/figures/paa/matching-rp.png", myplot, width = 6, height = 6, dpi = 500)
+scales::viridis_pal(option = "plasma", direction = -1, begin = 0.1, end = 0.8)(3)
+
+#scales::viridis_pal(option = "plasma", direction = -1, begin = 0.1, end = 0.8)(3)
+allfigdat <- rbind(figdatA, figdatC)
+allfigdat$name <- ifelse(allfigdat$name == "n", "N", "%")
+allfigdat$name <- factor(allfigdat$name, levels = c("N", "%"))
+myplot <- allfigdat %>%
+  filter(event != "Live births") %>%
+  mutate(event = factor(event, levels = c("Child died", "Child surviving"))) %>% #, "Live births"))) %>%
+  mutate(type = factor(type, levels = c("Addition", "Omission", "Match"))) %>%
+  mutate(label = ifelse(name == "N", value, round(value, 0))) %>%
+  filter(name == "%") %>%
+  ggplot() +
+  geom_bar(aes(x = event, y = value, fill = type), stat = "identity", position = "stack") +
+  geom_text(
+    data = ~subset(.x, name == "%"),
+    aes(x = event, y = value, label = label, group = type),
+    position = position_stack(vjust = 0.5),
+    size = 6,
+    color = "white"
+  ) +
+  coord_flip() +
+  facet_wrap(~ subsample, nrow = 1, scales = "free_x") +
+  labs(x = "", y = "", title = "") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  scale_fill_manual(
+    values = c(
+      "Match"    = "#42049EFF",
+      "Omission" = "#BF3984FF",
+      "Addition" = "#FCA636FF"
+    ),
+    name = ""
+  ) +
+  theme(legend.position = "bottom", text = element_text(size = 18)) +
+  guides(fill = guide_legend(reverse = TRUE))
+myplot
+
+ggsave("./gen/figures/paa/matching-both-justper.png", myplot, width = 12, height = 6, dpi = 500)
+
 
 
 # Flextable ---------------------------------------------------------------

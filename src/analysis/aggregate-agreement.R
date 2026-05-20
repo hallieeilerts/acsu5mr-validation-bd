@@ -385,7 +385,7 @@ myplot1 <- plotDat %>%
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), 5, by = 1)) +
   labs(title = unique(plotDat$outcome), x = "FPH", y = "HDSS") +
-  coord_cartesian(ylim = c(-0.1, 5.1), xlim = c(-0.1, 5.1)) +
+  coord_cartesian(ylim = c(-0.2, 5.2), xlim = c(-0.2, 5.2)) +
   theme_bw() +
   theme(
     panel.grid.major = element_blank(),
@@ -399,7 +399,7 @@ plotDat <- fn_aggAgreement(dat, outcome = "Stillbirth", denom = "C")
 myplot2 <- plotDat %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
-  geom_text(aes(x= n_sur, y = n_dss, label = n)) +
+  geom_text(aes(x= n_sur, y = n_dss, label = n), color = "grey50") +
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
@@ -411,13 +411,14 @@ myplot2 <- plotDat %>%
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
     text = element_text(size = 10)
   )
+myplot2
 #ggsave("./gen/figures/agg-agree-SB.png", myplot2, width = 4, height = 2.5, dpi = 500)
 
 plotDat <- fn_aggAgreement(dat, outcome = "Miscarriage", denom = "C")
 myplot3 <- plotDat %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
-  geom_text(aes(x= n_sur, y = n_dss, label = n)) +
+  geom_text(aes(x= n_sur, y = n_dss, label = n), color = "grey50") +
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   #scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
@@ -431,18 +432,19 @@ myplot3 <- plotDat %>%
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
     text = element_text(size = 10)
   )
+myplot3
 #ggsave("./gen/figures/agg-agree-MSC.png", myplot3, width = 4, height = 2.5, dpi = 500)
 
 plotDat <- fn_aggAgreement(dat, outcome = "Abortion", denom = "C")
 myplot4 <- plotDat %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
-  geom_text(aes(x= n_sur, y = n_dss, label = n)) +
+  geom_text(aes(x= n_sur, y = n_dss, label = n), color = "grey50") +
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), 2, by = 1)) +
   labs(title = unique(plotDat$outcome), x = "FPH", y = "HDSS") +
-  #coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
+  coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
   theme_bw() +
   theme(
     panel.grid.major = element_blank(),
@@ -475,7 +477,7 @@ plotDat <- fn_aggAgreement(dat, outcome = "Postneonatal", denom = "C")
 myplot6 <- plotDat %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
-  geom_text(aes(x= n_sur, y = n_dss, label = n)) +
+  geom_text(aes(x= n_sur, y = n_dss, label = n), color = "grey50") +
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
@@ -487,13 +489,14 @@ myplot6 <- plotDat %>%
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
     text = element_text(size = 10)
   )
+myplot6
 #ggsave("./gen/figures/agg-agree-Postneonatal.png", myplot6, width = 4, height = 2.5, dpi = 500)
 
 plotDat <- fn_aggAgreement(dat, outcome = "1-4", denom = "C")
 myplot7 <- plotDat %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
-  geom_text(aes(x= n_sur, y = n_dss, label = n)) +
+  geom_text(aes(x= n_sur, y = n_dss, label = n), color = "grey50") +
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
@@ -505,13 +508,14 @@ myplot7 <- plotDat %>%
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
     text = element_text(size = 10)
   )
+myplot7
 #ggsave("./gen/figures/agg-agree-Child.png", myplot7, width = 4, height = 2.5, dpi = 500)
 
 plotDat <- fn_aggAgreement(dat, outcome = "5-9", denom = "C")
 myplot8 <- plotDat %>%
   ggplot() +
   geom_tile(aes(x= n_sur, y = n_dss, fill = n), color = "black") +
-  geom_text(aes(x= n_sur, y = n_dss, label = n)) +
+  geom_text(aes(x= n_sur, y = n_dss, label = n), color = "grey50") +
   scale_fill_viridis_c(direction = -1, option = "plasma", limits = c(0, 335), name = "N mothers") +
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
@@ -523,6 +527,7 @@ myplot8 <- plotDat %>%
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
     text = element_text(size = 10)
   )
+myplot8
 #ggsave("./gen/figures/agg-agree-OlderChild.png", myplot8, width = 4, height = 2.5, dpi = 500)
 
 plotDat <- fn_aggAgreement(dat, outcome = "Surviving", denom = "C")
@@ -542,6 +547,7 @@ myplot9 <- plotDat %>%
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
     text = element_text(size = 10)
   )
+myplot9
 #ggsave("./gen/figures/agg-agree-surviving.png", myplot9, width = 4, height = 2.5, dpi = 500)
 
 plotDat <- fn_aggAgreement(dat, outcome = "Died", denom = "C")
@@ -560,6 +566,7 @@ myplot10 <- plotDat %>%
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
     text = element_text(size = 10)
   )
+myplot10
 #ggsave("./gen/figures/agg-agree-died.png", myplot10, width = 4, height = 2.5, dpi = 500)
 
 
@@ -580,6 +587,21 @@ ggsave(
   plot = combined_plot,
   width = 10,
   height = 12,
+  dpi = 300
+)
+
+combined_plot <- ggarrange(
+  plotlist = plots,
+  ncol = 4, nrow = 2,
+  common.legend = TRUE,
+  legend = "bottom"
+)
+combined_plot
+ggsave(
+  "./gen/figures/paa/agg-agree-tiles-C.png",
+  plot = combined_plot,
+  width = 12,
+  height = 6,
   dpi = 300
 )
 
@@ -748,21 +770,10 @@ datTabAllC <- rbind(datPr, datLB, datSB, datMSC, datAB,
                     datNeo, datPneo, datChild, datOlderchild,
                     datSurv, datDied)
 
-
-
 datTabAll <- rbind(datTabAllA, datTabAllB, datTabAllC)
 
 myplot <- datTabAll %>%
   filter(denom %in% c("A", "B", "C")) %>%
-  # mutate(denom = case_when(
-  #   denom == "A" ~ paste0("All-women (n = ", n_womA, ")"), #"All",
-  #   denom == "B" ~ paste0("Lifelong-resident (n = ",n_womB, ")"), #"Mothers: lifelong residents",
-  #   denom == "C" ~ paste0("Recent-pregnancies (n = ", n_womC, ")"), #"Mother+pregnancies: prev. 10 years",
-  #   TRUE ~ denom
-  # )) %>%
-  # mutate(denom = factor(denom, levels = c(paste0("All-women (n = ", n_womA, ")"),
-  #                                         paste0("Lifelong-resident (n = ",n_womB, ")"), # "Mothers: lifelong residents"
-  #                                         paste0("Recent-pregnancies (n = ", n_womC, ")")))) %>% # "Mother+pregnancies: prev. 10 years
   mutate(denom = case_when(
     denom == "A" ~ "All-women", 
     denom == "B" ~ "Lifelong-resident", 
@@ -822,11 +833,7 @@ myplot <- datTabAll %>%
 myplot
 ggsave("./gen/figures/total-events-bysource-reldif.png", myplot, width = 8, height = 3, dpi = 500)
 
-
-
-
-
-
+# numbers for paper
 datTabAll %>%
   filter(denom %in% c("A", "B", "C")) %>%
   mutate(reldif =  100 * (n_sur - n_dss)/n_dss) %>%
@@ -851,6 +858,142 @@ datTabAll %>%
   filter(denom %in% c("A", "B", "C")) %>%
   mutate(reldif =  100 * (n_sur - n_dss)/n_dss) %>%
   filter(denom %in% c("B", "C") & outcome == "5-9y death") 
+
+# PAA figure: total number of events --------------------------------------
+
+p1 <- datTabAll %>%
+  filter(denom %in% c("A", "C")) %>%
+  mutate(denom = case_when(
+    denom == "A" ~ "All women, all pregnancies", 
+    denom == "C" ~ "Recent-pregnancies", 
+    TRUE ~ denom
+  )) %>%
+  mutate(denom = factor(denom, levels = c("All women, all pregnancies", 
+                                          "Recent-pregnancies"))) %>% 
+  pivot_longer(cols = c(n_sur, n_dss), names_to = "n") %>%
+  mutate(n = ifelse(n == "n_dss", "HDSS", "FPH")) %>%
+  mutate(n = factor(n, levels = c("FPH", "HDSS"))) %>%
+  mutate(outcome = factor(outcome, levels = rev(c("Pregnancy","Live birth",
+                                                  "Stillbirth","Miscarriage","Abortion","Neonatal death", "Postneonatal death",
+                                                  "1-4y death","5-9y death","Surviving children", "Non-surviving children")))) %>%
+  ggplot() +
+  geom_bar(aes(x = outcome, y = value, fill = n), 
+           stat = "identity", position = "dodge") +
+  geom_text(aes(x = outcome, y = value, label = value, group = n),
+            position = position_dodge(width = 0.9), hjust = -0.1, size = 3.25) +
+  scale_fill_manual(values = scales::viridis_pal(option = "plasma")(4)[2:3], name = "",
+                    guide = guide_legend(reverse = TRUE)) +
+  labs(y = "N events", x = "") +
+  facet_wrap(~denom, labeller = label_wrap_gen(40)) +
+  coord_flip(ylim = c(0, 3100)) +
+  theme(legend.position = "bottom", text = element_text(size = 18))
+
+# relative difference dss to fph
+p2 <- datTabAll %>%
+  filter(denom %in% c("A", "C")) %>%
+  mutate(denom = case_when(
+    denom == "A" ~ "All women, all pregnancies", 
+    denom == "C" ~ "Recent-pregnancies", 
+    TRUE ~ denom
+  )) %>%
+  mutate(denom = factor(denom, levels = c("All women, all pregnancies", 
+                                          "Recent-pregnancies"))) %>% 
+  mutate(reldif =  100 * (n_sur - n_dss)/n_dss) %>%
+  mutate(outcome = factor(outcome, levels = rev(c("Pregnancy","Live birth",
+                                                  "Stillbirth","Miscarriage","Abortion","Neonatal death", "Postneonatal death",
+                                                  "1-4y death","5-9y death","Surviving children", "Non-surviving children")))) %>%
+  ggplot() +
+  geom_bar(aes(x = outcome, y = reldif), stat = "identity") +
+  geom_hline(aes(yintercept = 0), color = "red") +
+  labs(y = "Relative difference (reference = HDSS)", x = "") +
+  facet_wrap(~denom, labeller = label_wrap_gen(40)) +
+  coord_flip( )  +
+  theme(text = element_text(size = 18))
+
+
+plots <- list(p1, p2)
+combined_plot <- ggarrange(
+  plotlist = plots,
+  ncol = 1, nrow = 2,
+  common.legend = TRUE,
+  legend = "bottom"
+)
+combined_plot
+ggsave(
+  "./gen/figures/paa/total-events.png",
+  plot = combined_plot,
+  width = 12,
+  height = 6,
+  dpi = 300
+)
+
+
+# PAA option 2 ------------------------------------------------------------
+
+
+p1 <- datTabAll %>%
+  filter(denom %in% c("C")) %>%
+  filter(!(outcome %in% c("Surviving children", "Non-surviving children"))) %>%
+  mutate(denom = case_when(
+    denom == "C" ~ "Recent-pregnancies", 
+    TRUE ~ denom
+  )) %>%
+  mutate(denom = factor(denom, levels = c("Recent-pregnancies"))) %>% 
+  pivot_longer(cols = c(n_sur, n_dss), names_to = "n") %>%
+  mutate(n = ifelse(n == "n_dss", "HDSS", "FPH")) %>%
+  mutate(n = factor(n, levels = c("FPH", "HDSS"))) %>%
+  mutate(outcome = factor(outcome, levels = rev(c("Pregnancy","Live birth",
+                                                  "Stillbirth","Miscarriage","Abortion","Neonatal death", "Postneonatal death",
+                                                  "1-4y death","5-9y death" )))) %>%
+                                                  #,"Surviving children", "Non-surviving children")))) %>%
+  ggplot() +
+  geom_bar(aes(x = outcome, y = value, fill = n), 
+           stat = "identity", position = "dodge") +
+  geom_text(aes(x = outcome, y = value, label = value, group = n),
+            position = position_dodge(width = 0.9), hjust = -0.1, size = 3.25) +
+  scale_fill_manual(values = scales::viridis_pal(option = "plasma")(4)[2:3], name = "",
+                    guide = guide_legend(reverse = TRUE)) +
+  labs(y = "N events", x = "") +
+  coord_flip(ylim = c(0, 1200)) +
+  theme(legend.position = "bottom", text = element_text(size = 18))
+# relative difference dss to fph
+p2 <- datTabAll %>%
+  filter(denom %in% c("C")) %>%
+  filter(!(outcome %in% c("Surviving children", "Non-surviving children"))) %>%
+  mutate(denom = case_when(
+    denom == "C" ~ "Recent-pregnancies", 
+    TRUE ~ denom
+  )) %>%
+  mutate(reldif =  100 * (n_sur - n_dss)/n_dss) %>%
+  mutate(outcome = factor(outcome, levels = rev(c("Pregnancy","Live birth",
+                                                  "Stillbirth","Miscarriage","Abortion","Neonatal death", "Postneonatal death",
+                                                  "1-4y death","5-9y death")))) %>%
+                                                  #,"Surviving children", "Non-surviving children")))) %>%
+  ggplot() +
+  geom_bar(aes(x = outcome, y = reldif), stat = "identity") +
+  geom_hline(aes(yintercept = 0), color = "red") +
+  labs(y = "Relative difference (reference = HDSS)", x = "") +
+  coord_flip( )  +
+  theme(text = element_text(size = 18), axis.text.y = element_blank())
+
+
+plots <- list(p1, p2)
+combined_plot <- ggarrange(
+  plotlist = plots,
+  ncol = 2, nrow = 1,
+  common.legend = TRUE,
+  legend = "bottom"
+)
+combined_plot
+ggsave(
+  "./gen/figures/paa/total-events-1row.png",
+  plot = combined_plot,
+  width = 12,
+  height = 6,
+  dpi = 300
+)
+
+
 
 
 # Numbers for sample -------------------------------------------------------
