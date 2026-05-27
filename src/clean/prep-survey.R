@@ -16,8 +16,19 @@ library(haven)
 library(stringr)
 #' Inputs
 # survey_final_all2: livebirth and stillbirth records from the survey
-dat <- read_dta("./data/20250930/survey_final_all2.dta")
+dat <- read_dta("./data/20260412/survey_final_all2.dta")
+# previous version of the file that had variables sample and sample2
+dat_sample <- read_dta("./data/20250930/survey_final_all2.dta")
 ################################################################################
+
+# merge on sample variables
+df_samp <- dat_sample %>%
+  select(rid_m, sample, sample2) %>%
+  unique()
+dat <- dat %>%
+  left_join(df_samp, by = "rid_m")
+nrow(subset(dat, is.na(sample))) # 0
+nrow(subset(dat, is.na(sample2))) # 0
 
 # Variable examination ----------------------------------------------------
 
@@ -43,7 +54,7 @@ dat %>%
 # unique child id variable is uid_c
 # rid_c is not unique
 nrow(dat) # 2468
-length(unique(dat$rid_c)) # 1970
+length(unique(dat$rid_c)) # 1945
 nrow(subset(dat, is.na(rid_c))) # 0
 length(unique(dat$uid_c)) # 2648
 nrow(subset(dat, is.na(uid_c))) # 0
@@ -353,10 +364,36 @@ dat <- dat %>%
   ))
 
 # simplified age at death variables
-# to replace c228 variables with 
+# to replace c228
 dat %>%
   filter(!is.na(c224) & c224 == "No") %>%
   select(c224, c228, c228_aa, c228_bb, c228_ccc, c228_cc, c228_d, c228_B)
+# check that whenever unit is days/months/years, the value is in the corresponding column
+dat %>%
+  filter(!is.na(c224) & c224 == "No") %>%
+  filter(c228 == "In days" & is.na(c228_aa)) %>% nrow() # 1
+dat %>%
+  filter(!is.na(c224) & c224 == "No") %>%
+  filter(c228 == "In months" & is.na(c228_bb)) %>% nrow() # 0
+dat %>%
+  filter(!is.na(c224) & c224 == "No") %>%
+  filter(c228 == "In years" & is.na(c228_cc)) # 0
+# there is an error for rid_m 5V72058809 that wasn't in the previous survey data
+dat %>%
+  filter(!is.na(c224) & c224 == "No") %>%
+  filter(c228 == "In days" & is.na(c228_aa)) %>%
+  select(rid_m, rid_c, uid_c_sur, c224, c228, c228_aa, c228_bb, c228_ccc, c228_cc, c228_d, c228_B)
+dat_sample %>%
+  filter(rid_m == "5V72058809" & uid_c_sur == "1640+1") %>%
+  select(rid_m, rid_c, uid_c_sur, c224, c228, c228_aa, c228_bb, c228_ccc, c228_cc, c228_d, c228_B)
+# correct error
+dat$c228_bb[dat$rid_m == "5V72058809" & dat$uid_c_sur == "1640+1"] <- as.numeric(dat$c228_B[dat$rid_m == "5V72058809" & dat$uid_c_sur == "1640+1"])
+dat$c228[dat$rid_m == "5V72058809" & dat$uid_c_sur == "1640+1"] <- "In months"
+dat$c228_ccc[dat$rid_m == "5V72058809" & dat$uid_c_sur == "1640+1"] <- NA
+dat %>%
+  filter(rid_m == "5V72058809" & uid_c_sur == "1640+1")  %>%
+  select(rid_m, rid_c, uid_c_sur, c224, c228, c228_aa, c228_bb, c228_ccc, c228_cc, c228_d, c228_B)
+
 dat <- dat %>% mutate(aad_unit_sur = case_when(
   c228 == "In days" ~ 1,
   c228 == "In months" ~ 2,
@@ -375,7 +412,10 @@ dat %>%
 # Check that aad_unit never missing when c228 reported
 nrow(subset(dat, is.na(aad_unit_sur) & !is.na(c228) & c228 == "Yes")) # 0
 # Check that aad_value never missing when c228 unit reported
-nrow(subset(dat, is.na(aad_val_sur) & (!is.na(c228_aa) | !is.na(c228_bb) | !is.na(c228_ccc) ))) # 0
+nrow(subset(dat, is.na(aad_val_sur) & (!is.na(c228_aa) | !is.na(c228_bb) | !is.na(c228_ccc) )) ) # 0
+dat %>%
+  filter( is.na(aad_val_sur) & (!is.na(c228_aa) | !is.na(c228_bb) | !is.na(c228_ccc) )) %>%
+  select(c224, c228, c228_aa, c228_bb, c228_ccc, c228_cc, c228_d, c228_B, aad_unit_sur, aad_val_sur)
 # Transform into months
 dat$aadm_sur <- dat$aad_val_sur
 dat$aadm_sur[which(dat$aad_unit_sur == 1)] <- dat$aadm_sur[which(dat$aad_unit_sur == 1)] / 30.5

@@ -42,7 +42,7 @@ dat <- overall %>%
          # deaths in survey
          eventDth_sur = ifelse(cstatus_sur == "Died", 1, 0),
          denomA = ifelse(subsampA == 1 & eventDth_dss == 1, 1, 0),
-         denomC = ifelse(subsampC == 1 & eventDth_sur == 1, 1, 0)
+         denomC = ifelse(subsampC == 1 & (eventDth_sur == 1 | eventDth_dss == 1), 1, 0)
   )
 
 # omissions ---------------------------------------------------------------
@@ -50,7 +50,8 @@ dat <- overall %>%
 vars <- c(
   "birthorder_cat_comb", "paritymaxcat_comb", "birthrecency_cat", "deathrecency_cat",
   "magecat2_int", "hhsizecat_sur", "hhassets_sur", 
-  "intinterupt_sur", "observer_sur", "intcoop_sur", "breakdown_sur",
+  "intinterupt_sur", "observer_sur", "intcoop_sur", "otherwork_sur",
+  "breakdown_sur", "support_sur",
   "cstatus_agesp_comb", "cstrata_ac"
 )
 
@@ -76,7 +77,7 @@ tabDth <- datDth %>%
   ungroup() %>%
   pivot_wider(id_cols = c(variable, value), names_from = type, values_from = c(n, per)) %>%
   mutate(n_Omission = ifelse(is.na(n_Omission), 0, n_Omission),
-         per_Omission = ifelse(is.na(per_Omission), 0, per_Omission)) %>%
+         per_Omission = ifelse(is.na(per_Omission), "0.00", per_Omission)) %>%
   select(variable, value, n_Match, per_Match, n_Omission, per_Omission) 
 
 # add total row
@@ -107,6 +108,12 @@ tabDth <- tabDth %>%
 tabChi <- map_dfr(vars, function(v) {
   
   mydat <- datDth
+  mydat <- mydat[!(mydat[[v]] == "Missing"),]
+  
+  if(v == "cstrata_ac"){
+    mydat <- mydat[!(mydat[[v]] == "5-9 year"),]
+    mydat <- mydat[!(mydat[[v]] == "10+"),]
+  }
   
   tab <- table(mydat$type, mydat[[v]])
   test <- chisq.test(tab)
@@ -129,7 +136,8 @@ tabDth <- tabDth %>%
 
 # order variables
 # household level
-v_hh <- c("hhsizecat_sur", "hhassets_sur", "observer_sur", "intinterupt_sur", "intcoop_sur", "breakdown_sur")
+v_hh <- c("hhsizecat_sur", "hhassets_sur", "observer_sur", "intinterupt_sur", "intcoop_sur", "breakdown_sur",
+          "otherwork_sur", "support_sur")
 # women-level
 v_wom <- c("magecat2_int", "paritymaxcat_comb")
 # child-level
@@ -170,6 +178,12 @@ tabDth <- tabDth %>%
     variable == "breakdown_sur" & value == "Mild" ~ 3,
     variable == "breakdown_sur" & value == "Moderate" ~ 4,
     variable == "breakdown_sur" & value == "Severe" ~ 5,
+    variable == "otherwork_sur" & value == "Missing" ~ 1,
+    variable == "otherwork_sur" & value == "No" ~ 2,
+    variable == "otherwork_sur" & value == "Yes" ~ 3,
+    variable == "support_sur" & value == "Missing" ~ 1,
+    variable == "support_sur" & value == "No" ~ 2,
+    variable == "support_sur" & value == "Yes" ~ 3,
     variable == "cstatus_agesp_comb" & value == "Surviving" ~ 1,
     variable == "cstatus_agesp_comb" & value == "Neonatal" ~ 2,
     variable == "cstatus_agesp_comb" & value == "Postneonatal" ~ 3,
@@ -192,6 +206,10 @@ tabDth <- tabDth %>%
   )) %>%
   arrange(variablerank, valuerank)
 
+# Remove strata that don't have cause
+tabDth <- tabDth %>%
+  filter(!(variable == "cstrata_ac" & value %in% c("5-9 year", "10+")))
+
 # clean up variable names
 tabDth <- tabDth %>%
   mutate(variable = case_when(
@@ -201,6 +219,8 @@ tabDth <- tabDth %>%
     variable == "intinterupt_sur"  ~ "Interview interrupted by others",
     variable == "intcoop_sur"  ~ "Respondent cooperation",
     variable == "breakdown_sur"  ~ "Respondent emotional breakdown",
+    variable == "otherwork_sur"  ~ "Respondent conducting other work during interview",
+    variable == "support_sur"  ~ "Respondent received support from others",
     variable == "magecat2_int" ~ "Mother age",
     variable == "paritymaxcat_comb" ~ "Mother parity",
     variable == "birthorder_cat_comb" ~ "Birth order",
@@ -219,17 +239,21 @@ tabDth$per_Omission[is.na(tabDth$per_Omission)] <- "0.00"
 #tabDth$per_Addition[is.na(tabDth$per_Addition)] <- "0.00"
 
 tabDthO <- tabDth
+# remove matches columns
+tabDthO <- tabDthO[,c("variable","value","n_Omission", "per_Omission", "pvalcat")]
 
 ft <- tabDthO %>%
   flextable() %>%
-  set_header_labels(values = c("Variable", "Value", "N", "%", "N", "%", "p-value")) %>%
-  add_header_row(values = c(" ","Match", "Omission", ""), colwidths = c(2, 2, 2, 1)) %>%
+  #set_header_labels(values = c("Variable", "Value", "N", "%", "N", "%", "p-value")) %>%
+  #add_header_row(values = c(" ","Match", "Omission", ""), colwidths = c(2, 2, 2, 1)) %>%
+  set_header_labels(values = c("Variable", "Value", "N", "%", "p-value")) %>%
+  add_header_row(values = c(" ", "Omission", ""), colwidths = c(2, 2, 1)) %>%
   set_caption(caption = "Characteristics of DSS deaths by reporting in FPH (ie, matches and omissions)") %>%
   merge_v(j = ~ variable + pvalcat) %>%
   flextable::fontsize(size = 9, part = "all") %>%
   flextable::font(fontname = "Times New Roman", part = "all") %>%
   autofit() %>%
-  align(align = "right", j = 2:ncol(tabDth), part = "all") %>%
+  align(align = "right", j = 2:ncol(tabDthO), part = "all") %>%
   align(align = "left", j = 1, part = "all")
 ft
 
@@ -247,15 +271,18 @@ doc <- read_docx() %>%
 vars <- c(
   "birthorder_cat_comb", "paritymaxcat_comb", "birthrecency_cat", "deathrecency_cat",
   "magecat2_int", "hhsizecat_sur", "hhassets_sur", 
-  "intinterupt_sur", "observer_sur", "intcoop_sur", "breakdown_sur",
+  "intinterupt_sur", "observer_sur", "intcoop_sur", "otherwork_sur",
+  "breakdown_sur", "support_sur",
   "cstatus_agesp_comb"
 )
+
 
 datDth <- dat %>%
   filter(denomC == 1) %>%
   mutate(type = case_when(
     type == "VS_NoMatch" ~ "Addition", # not reported in hdss, addition from validation study
-    type == "VS_Match" ~ "Match",
+    type == "VS_Match" ~ "MatchOrOmission",
+    type == "HDSS_NoMatch" ~ "MatchOrOmission",
     TRUE ~ NA
   ))  %>% 
   select(type, all_of(vars)) %>%
@@ -276,15 +303,16 @@ tabDth <- datDth %>%
   ungroup() %>%
   pivot_wider(id_cols = c(variable, value), names_from = type, values_from = c(n, per)) %>%
   mutate(n_Addition = ifelse(is.na(n_Addition), 0, n_Addition),
-         per_Addition = ifelse(is.na(per_Addition), 0, per_Addition)) %>%
-  select(variable, value, n_Match, per_Match, n_Addition, per_Addition) 
+         per_Addition = ifelse(is.na(per_Addition), "0.00", per_Addition)) %>%
+  select(variable, value, n_MatchOrOmission, per_MatchOrOmission, n_Addition, per_Addition) 
 
 # add total row
 tabDthtot <- dat %>%
   filter(denomC == 1) %>%
   mutate(type = case_when(
     type == "VS_NoMatch" ~ "Addition", # not reported in hdss, addition from validation study
-    type == "VS_Match" ~ "Match",
+    type == "VS_Match" ~ "MatchOrOmission",
+    type == "HDSS_NoMatch" ~ "MatchOrOmission",
     TRUE ~ NA
   )) %>%
   mutate(total = "") %>%
@@ -299,7 +327,7 @@ tabDthtot <- dat %>%
   mutate(per = sprintf("%.2f", round(n / sum(n)*100, 2))) %>%
   ungroup() %>%
   pivot_wider(id_cols = c(variable, value), names_from = type, values_from = c(n, per)) %>%
-  select(variable, value, n_Match, per_Match, n_Addition, per_Addition) 
+  select(variable, value, n_MatchOrOmission, per_MatchOrOmission, n_Addition, per_Addition) 
 tabDth <- tabDth %>%
   bind_rows(tabDthtot)
 
@@ -307,6 +335,12 @@ tabDth <- tabDth %>%
 tabChi <- map_dfr(vars, function(v) {
   
   mydat <- datDth
+  mydat <- mydat[!(mydat[[v]] == "Missing"),]
+  
+  if(v == "cstrata_ac"){
+    mydat <- mydat[!(mydat[[v]] == "5-9 year"),]
+    mydat <- mydat[!(mydat[[v]] == "10+"),]
+  }
   
   tab <- table(mydat$type, mydat[[v]])
   test <- chisq.test(tab)
@@ -329,7 +363,8 @@ tabDth <- tabDth %>%
 
 # order variables
 # household level
-v_hh <- c("hhsizecat_sur", "hhassets_sur", "observer_sur", "intinterupt_sur", "intcoop_sur", "breakdown_sur")
+v_hh <- c("hhsizecat_sur", "hhassets_sur", "observer_sur", "intinterupt_sur", "intcoop_sur", "breakdown_sur",
+          "otherwork_sur", "support_sur")
 # women-level
 v_wom <- c("magecat2_int", "paritymaxcat_comb")
 # child-level
@@ -370,6 +405,12 @@ tabDth <- tabDth %>%
     variable == "breakdown_sur" & value == "Mild" ~ 3,
     variable == "breakdown_sur" & value == "Moderate" ~ 4,
     variable == "breakdown_sur" & value == "Severe" ~ 5,
+    variable == "otherwork_sur" & value == "Missing" ~ 1,
+    variable == "otherwork_sur" & value == "No" ~ 2,
+    variable == "otherwork_sur" & value == "Yes" ~ 3,
+    variable == "support_sur" & value == "Missing" ~ 1,
+    variable == "support_sur" & value == "No" ~ 2,
+    variable == "support_sur" & value == "Yes" ~ 3,
     variable == "cstatus_agesp_comb" & value == "Surviving" ~ 1,
     variable == "cstatus_agesp_comb" & value == "Neonatal" ~ 2,
     variable == "cstatus_agesp_comb" & value == "Postneonatal" ~ 3,
@@ -389,6 +430,8 @@ tabDth <- tabDth %>%
     variable == "intinterupt_sur"  ~ "Interview interrupted by others",
     variable == "intcoop_sur"  ~ "Respondent cooperation",
     variable == "breakdown_sur"  ~ "Respondent emotional breakdown",
+    variable == "otherwork_sur"  ~ "Respondent conducting other work during interview",
+    variable == "support_sur"  ~ "Respondent received support from others",
     variable == "magecat2_int" ~ "Mother age",
     variable == "paritymaxcat_comb" ~ "Mother parity",
     variable == "birthorder_cat_comb" ~ "Birth order",
@@ -398,23 +441,28 @@ tabDth <- tabDth %>%
     variable == "total"   ~ "Total",
   )) %>%
   select(-c(variablerank, valuerank)) 
-tabDth$n_Match[is.na(tabDth$n_Match)] <- 0
+tabDth$n_MatchOrOmission[is.na(tabDth$n_MatchOrOmission)] <- 0
 tabDth$n_Addition[is.na(tabDth$n_Addition)] <- 0
-tabDth$per_Match[is.na(tabDth$per_Match)] <- "0.00"
+tabDth$per_MatchOrOmission[is.na(tabDth$per_MatchOrOmission)] <- "0.00"
 tabDth$per_Addition[is.na(tabDth$per_Addition)] <- "0.00"
 
 tabDthA <- tabDth
+# remove matches and omissions columns
+tabDthA <- tabDthA[,c("variable","value","n_Addition", "per_Addition", "pvalcat")]
+
 
 ft <- tabDthA %>%
   flextable() %>%
-  set_header_labels(values = c("Variable", "Value", "N", "%", "N", "%", "p-value")) %>%
-  add_header_row(values = c(" ","Match", "Additions", ""), colwidths = c(2, 2, 2, 1)) %>%
+  # set_header_labels(values = c("Variable", "Value", "N", "%", "N", "%", "p-value")) %>%
+  # add_header_row(values = c(" ","Match", "Additions", ""), colwidths = c(2, 2, 2, 1)) %>%
+  set_header_labels(values = c("Variable", "Value", "N", "%", "p-value")) %>%
+  add_header_row(values = c(" ", "Additions", ""), colwidths = c(2, 2, 1)) %>%
   set_caption(caption = "Characteristics of FPH deaths by reporting in DSS (ie, matches and additions)") %>%
   merge_v(j = ~ variable + pvalcat) %>%
   flextable::fontsize(size = 9, part = "all") %>%
   flextable::font(fontname = "Times New Roman", part = "all") %>%
   autofit() %>%
-  align(align = "right", j = 2:ncol(tabDth), part = "all") %>%
+  align(align = "right", j = 2:ncol(tabDthA), part = "all") %>%
   align(align = "left", j = 1, part = "all")
 ft
 
@@ -432,13 +480,39 @@ doc <- read_docx() %>%
 tabDthComb <- tabDthO %>%
   left_join(tabDthA, by = c("variable", "value"), suffix = c("_o", "_a"))
 
+# Add zeroes for any missing values or percentages
+tabDthComb$per_Addition[tabDthComb$variable != "Cause of death" &
+                      is.na(tabDthComb$n_Addition)] <- "0.00"
+tabDthComb$n_Addition[tabDthComb$variable != "Cause of death" &
+                        is.na(tabDthComb$n_Addition)] <- 0
+
+# Remove those with zero omissions that aren't a focus
+tabDthComb <- tabDthComb %>%
+  filter(!(variable == "Age-at-death" & value == "10+" & n_Omission == 0)) %>%
+  filter(!(value == "Missing" & n_Omission == 0 & n_Addition == 0))
+
+# check if any zeros remaining
+tabDthComb %>%
+  filter(n_Omission == 0 & n_Addition == 0)
+# fully interrupted interview. this is ok because it is part of a scaled response
+
+# Remove variable for social support
+# not sure what it means and wasn't in original questionnaire
+tabDthComb <- tabDthComb %>%
+  filter(!(variable == "Respondent received support from others"))
+
 ft <- tabDthComb %>%
   flextable() %>%
-  set_header_labels(values = c("Variable", "Value", "N", "%", "N", "%", "p-value", "N", "%", "N", "%", "p-value")) %>%
-  add_header_row(values = c(" ","Match", "Omission", " ", "Match", "Addition", " "), 
-                 colwidths = c(2, 2, 2, 1, 2, 2, 1)) %>%
+  # set_header_labels(values = c("Variable", "Value", "N", "%", "N", "%", "p-value", "N", "%", "N", "%", "p-value")) %>%
+  # add_header_row(values = c(" ","Match", "Omission", " ", "Match", "Addition", " "), 
+  #                colwidths = c(2, 2, 2, 1, 2, 2, 1)) %>%
+  # add_header_row(values = c(" ","All-women", "Recent-pregnancies"), 
+  #                colwidths = c(2, 5, 5)) %>%
+  set_header_labels(values = c("Variable", "Value", "N", "%", "p-value", "N", "%", "p-value")) %>%
+  add_header_row(values = c(" ","Omission", " ", "Addition", " "), 
+                 colwidths = c(2, 2, 1, 2, 1)) %>%
   add_header_row(values = c(" ","All-women", "Recent-pregnancies"), 
-                 colwidths = c(2, 5, 5)) %>%
+                 colwidths = c(2, 3, 3)) %>%
   set_caption(caption = "") %>%
   merge_v(j = ~ variable + pvalcat_o + pvalcat_a) %>%
   flextable::fontsize(size = 9, part = "all") %>%

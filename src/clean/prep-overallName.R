@@ -11,7 +11,8 @@ library(haven)
 library(stringr)
 #' Inputs
 # survey_final_all2: livebirth and stillbirth records from the survey
-dat <- read_dta("./data/20250930/overall_name_lb.dta")
+#dat <- read_dta("./data/20250930/overall_name_lb.dta")
+dat <- read_dta("./data/20260412/overall_name_lb.dta")
 ################################################################################
 
 # Variables that are different with overall_date
@@ -489,9 +490,7 @@ datnew$recnr <- NULL
 dat <- datnew
 
 
-
 # Fix incorrect matches ---------------------------------------------------
-
 
 # when survival status doesn't match and dob is more than 4 years different
 dat %>%

@@ -162,8 +162,6 @@ fn_aggAgreement <- function(dat, outcome, denom, plot = TRUE){
 }
 
 
-
-
 # Figure: mother-level agreement (tiles) for sample B ----------------------------------------------------------
 
 plotDat <- fn_aggAgreement(dat, outcome = "Live birth", denom = "B")

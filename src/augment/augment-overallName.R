@@ -417,7 +417,7 @@ nrow(overall_aug1) # 2760
 # now there are still some missing cstrata_ac
 overall_aug1 %>%
   filter(type %in% c("VS_Match", "HDSS_NoMatch")) %>% 
-  filter(!is.na(mstrata_ac) & is.na(cstrata_ac)) %>% nrow() # 23
+  filter(!is.na(mstrata_ac) & is.na(cstrata_ac)) %>% nrow() # 22
 # there missing ones are for non-matched events from the validation study
 # and missing ones for matched events that had NA, R99, or MH14 COD
 overall_aug1 %>%
@@ -479,3 +479,4 @@ overall_aug2 <- bind_rows(overall_aug1, survey_nomatch)
 # Save output(s) ----------------------------------------------------------
 
 saveRDS(overall_aug2, "./gen/augment/overallName-aug.rds")
+

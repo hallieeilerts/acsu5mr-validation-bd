@@ -271,6 +271,37 @@ dat <- dat %>%
   left_join(df_intcoop, by = "rid_m") %>%
   relocate(intcoop_sur, .after = d7) 
 
+# categorize d10: other work during interview
+table(dat$d10, useNA = "always")
+# it is missing for the unmatched records from the HDSS
+table(dat$d10, dat$type, useNA = "always")
+# first check that there is no one with multiple different non-na d10 values
+dat %>%
+  filter(!is.na(d10)) %>%
+  select(rid_m, d10) %>%
+  distinct() %>%
+  group_by(rid_m) %>%
+  summarise(n = n()) %>%
+  filter(n > 1) %>%
+  nrow() # 0
+# create one d10 per person, recoding as Missing where appropriate
+df_otherwork <- dat %>%
+  mutate(hasd10 = ifelse(!is.na(d10), 1, 0)) %>%
+  group_by(rid_m) %>%
+  mutate(hasd10 = sum(hasd10)) %>%
+  mutate(otherwork_sur = ifelse(hasd10 == 0, "Missing", as.character(d10))) %>%
+  #select(rid_m, type, pregout_dss, c244, hasc244, observer_sur) %>% filter(rid_m == "2A00012205") 
+  select(rid_m, otherwork_sur) %>%
+  distinct() %>%
+  filter(!is.na(otherwork_sur))
+# check we have a value for all mothers
+length(unique(dat$rid_m)[!(unique(dat$rid_m) %in% df_otherwork$rid_m)]) # 0
+# and no NA values
+nrow(subset(df_otherwork, is.na(otherwork_sur))) # 0
+dat <- dat %>%
+  left_join(df_otherwork, by = "rid_m") %>%
+  relocate(otherwork_sur, .after = d10) 
+
 # categorize d11: emotional breakdown
 table(dat$d11, useNA = "always")
 # it is missing for lots of records
@@ -310,6 +341,37 @@ nrow(subset(df_breakdown, is.na(breakdown_sur))) # 0
 dat <- dat %>%
   left_join(df_breakdown, by = "rid_m") %>%
   relocate(breakdown_sur, .after = d11) 
+
+# categorize d13: social support
+table(dat$d13, useNA = "always")
+# it is missing for the unmatched records from the HDSS
+table(dat$d13, dat$type, useNA = "always")
+# first check that there is no one with multiple different non-na d13 values
+dat %>%
+  filter(!is.na(d13)) %>%
+  select(rid_m, d13) %>%
+  distinct() %>%
+  group_by(rid_m) %>%
+  summarise(n = n()) %>%
+  filter(n > 1) %>%
+  nrow() # 0
+# create one d13 per person, recoding as Missing where appropriate
+df_support <- dat %>%
+  mutate(hasd13 = ifelse(!is.na(d13), 1, 0)) %>%
+  group_by(rid_m) %>%
+  mutate(hasd13 = sum(hasd13)) %>%
+  mutate(support_sur = ifelse(hasd13 == 0, "Missing", as.character(d13))) %>%
+  #select(rid_m, type, pregout_dss, c244, hasc244, observer_sur) %>% filter(rid_m == "2A00012205") 
+  select(rid_m, support_sur) %>%
+  distinct() %>%
+  filter(!is.na(support_sur))
+# check we have a value for all mothers
+length(unique(dat$rid_m)[!(unique(dat$rid_m) %in% df_support$rid_m)]) # 0
+# and no NA values
+nrow(subset(df_support, is.na(support_sur))) # 0
+dat <- dat %>%
+  left_join(df_support, by = "rid_m") %>%
+  relocate(support_sur, .after = d13) 
 
 # household size number
 table(dat$a1, useNA = "always")
@@ -407,8 +469,8 @@ dat <- dat %>%
 # Create new --------------------------------------------------------------
 
 # combined pregnancy outcome date (deferring to dss)
-nrow(subset(dat, is.na(dob_c_dss))) # 679
-nrow(subset(dat, is.na(c220))) # 536
+nrow(subset(dat, is.na(dob_c_dss))) # 680
+nrow(subset(dat, is.na(c220))) # 537
 dat <- dat %>%
   mutate(dob_c_comb = dplyr::if_else(!is.na(dob_c_dss), dob_c_dss, c220)) %>%
   mutate(dob_c_comb = as.Date(dob_c_comb, format = "%d-%b-%Y"))

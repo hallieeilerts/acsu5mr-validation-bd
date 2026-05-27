@@ -17,7 +17,8 @@ library(haven)
 # Contains all updated HDSS data of the mother and child
 # Newly added variables: CCOD cause of death up to May 31, 2025; 
 # alive (vital status on survey date); date and type of Mother’s first entry to Matlab
-dat <- read_dta("./data/20250930/hdss_final_all2.dta")
+#dat <- read_dta("./data/20250930/hdss_final_all2.dta")
+dat <- read_dta("./data/20260412/hdss_final_all2.dta")
 ################################################################################
 
 # Variable examination ----------------------------------------------------
@@ -42,6 +43,7 @@ nrow(dat) # 2505
 length(unique(dat$rid_m)) # 848
 length(unique(dat$rid_c)) # 2157
 head(sort(table(dat$rid_c), decreasing = TRUE)) # 341 blanks, 5 1's and 5 2's
+# in 20260412 data, 1 of each 2V06006522 3D88028903 3D88028904 
 length(unique(dat$serial1)) # 848
 length(unique(dat$uid_c)) # 2505 unique
 length(unique(dat$uid_c_dss)) # 2505 unique
@@ -85,8 +87,10 @@ dat <- dat %>%
     dob_m,  # mother dob
     coo_m,  # mother cause of out
     doo_m,  # mother date of out
-    mot_in_date, # mothers first in date
-    f_intype, # first in type of mother
+    #mot_in_date, # mothers first in date
+    #f_intype, # first in type of mother
+    m_findate, # mothers first in date
+    m_fintype, # first in type of mother
     parity_n_dss, # parity number dss
     po, # pregnancy outcome type
     name_c, # child name
@@ -118,7 +122,7 @@ dat <- dat %>%
 
 # convert to date
 dat <- dat %>%
-  mutate(mot_in_date = as.Date(mot_in_date, format = "%d-%b-%Y"))
+  mutate(m_findate = as.Date(m_findate, format = "%d-%b-%Y"))
 
 # Rename variables with dss suffix ----------------------------------------
 
@@ -127,8 +131,8 @@ dat <- dat %>%
   rename(dob_m_dss = dob_m,
          coo_m_dss = coo_m,
          doo_m_dss = doo_m,
-         doi_m_dss = mot_in_date,
-         toi_m_dss = f_intype,
+         doi_m_dss = m_findate,
+         toi_m_dss = m_fintype,
          name_m_dss = name_m,
          pregout_dss = po,
          name_c_dss = name_c,
@@ -144,17 +148,6 @@ dat <- dat %>%
 
 dat <- dat %>%
   rename(int_date_sur = sd)
-
-
-# # Recode values -----------------------------------------------------------
-# 
-# # pregnancy outcome
-# dat <- dat %>%
-#   mutate(pregout_dss = as.character(pregout_dss)) %>%
-#   mutate(pregout_dss = case_when(
-#     pregout_dss == "Livebirth" ~ "Live birth",
-#     TRUE ~ pregout_dss
-#   ))
 
 # Create new variables ----------------------------------------------------
 

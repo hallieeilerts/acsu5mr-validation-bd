@@ -265,7 +265,7 @@ dat <- dat %>%
 # Create new --------------------------------------------------------------
 
 # combined pregnancy outcome date
-nrow(subset(dat, is.na(dob_c_dss))) # 751
+nrow(subset(dat, is.na(dob_c_dss))) # 750
 nrow(subset(dat, is.na(c220))) # 607
 dat <- dat %>%
   mutate(dob_c_comb = dplyr::if_else(!is.na(dob_c_dss), dob_c_dss, c220)) %>%
@@ -306,7 +306,7 @@ dat <- dat %>%
 
 # Check id vars -----------------------------------------------------------
 
-nrow(dat) # 3260
+nrow(dat) # 3259
 
 # mother_id
 length(unique(dat$rid_m)) # 848
