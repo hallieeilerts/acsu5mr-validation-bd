@@ -162,6 +162,10 @@ dat <- dat %>%
   left_join(df_meducat, by = "rid_m") %>%
   relocate(meducat_sur, .after = b114) 
 
+
+# Interview-level characteristics -----------------------------------------
+
+
 # presence of others during section c
 table(dat$c244, useNA = "always")
 # anyone else around
@@ -373,6 +377,8 @@ dat <- dat %>%
   left_join(df_support, by = "rid_m") %>%
   relocate(support_sur, .after = d13) 
 
+# Household-level characteristics -----------------------------------------
+
 # household size number
 table(dat$a1, useNA = "always")
 # it is only missing for the unmatched records from the HDSS
@@ -404,25 +410,33 @@ dat <- dat %>%
   relocate(hhsize_sur, .after = HH_size) 
 
 
-# household size (small, medium, large)
-table(dat$HH_size, useNA = "always")
-# it is only missing for the unmatched records from the HDSS
-table(dat$HH_size, dat$type, useNA = "always")
-# first check that there is no one with multiple different non-na HH_size values
-dat %>%
-  filter(!is.na(HH_size)) %>%
-  select(rid_m, HH_size) %>%
-  distinct() %>%
-  group_by(rid_m) %>%
-  summarise(n = n()) %>%
-  filter(n > 1) %>%
-  nrow() # 0
-# create one HH_size per person, recoding as Missing where appropriate
+
+# # household size (small, medium, large)
+# table(dat$HH_size, useNA = "always")
+# # it is only missing for the unmatched records from the HDSS
+# table(dat$HH_size, dat$type, useNA = "always")
+# # first check that there is no one with multiple different non-na HH_size values
+# dat %>%
+#   filter(!is.na(HH_size)) %>%
+#   select(rid_m, HH_size) %>%
+#   distinct() %>%
+#   group_by(rid_m) %>%
+#   summarise(n = n()) %>%
+#   filter(n > 1) %>%
+#   nrow() # 0
+
+
+
+# there was already a HH_size variable
+table(dat$hhsize_sur, dat$HH_size, useNA = "always")
+# use that to categorize hhsize_sur
+# create one hhsizecat_cat per person, recoding as Missing where appropriate
 df_hhsizecat <- dat %>%
-  mutate(hasHHsize = ifelse(!is.na(HH_size), 1, 0)) %>%
+  mutate(hasHHsize = ifelse(!is.na(a1), 1, 0)) %>%
   group_by(rid_m) %>%
   mutate(hasHHsize = sum(hasHHsize)) %>%
-  mutate(hhsizecat_sur = ifelse(hasHHsize == 0, "Missing", as.character(HH_size))) %>%
+  mutate(hhsizecat_sur = cut(a1, breaks = c(0, 4, 7, 20), labels = c("Small", "Medium", "Large"))) %>%
+  mutate(hhsizecat_sur = ifelse(hasHHsize == 0, "Missing", as.character(hhsizecat_sur))) %>%
   select(rid_m, hhsizecat_sur) %>%
   distinct() %>%
   filter(!is.na(hhsizecat_sur))
@@ -433,7 +447,8 @@ nrow(subset(df_hhsizecat, is.na(hhsizecat_sur))) # 0
 dat <- dat %>%
   left_join(df_hhsizecat, by = "rid_m") %>%
   relocate(hhsizecat_sur, .after = hhsize_sur) 
-
+# check that matches the HH_size breakdown
+table(dat$hhsize_sur, dat$hhsizecat_sur, useNA = "always")
 
 # household assets
 table(dat$asset_quintile, useNA = "always")

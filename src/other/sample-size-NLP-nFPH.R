@@ -1,5 +1,5 @@
 
-# sample size exercise for an RCT or non-inferior trial design to test the NLP-nFPH vs conventional FPH and/or HDSS.
+# sample size exercise for an RCT or non-inferior trial design to test the natural language processing (NLP) FPH vs conventional FPH and/or HDSS.
 
 library(tidyr)
 library(dplyr)

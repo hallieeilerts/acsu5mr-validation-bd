@@ -18,6 +18,7 @@ library(lubridate)
 library(viridis)
 library(officer)
 library(flextable)
+library(UpSetR)
 #' Inputs
 overall <- readRDS("./gen/augment/overallName-recode.rds")
 ################################################################################
@@ -42,14 +43,20 @@ dat <- overall %>%
            as.numeric(as.Date(max(unique(overall$int_date_sur))) - doi_m_dss)/365.25 >= 15 & 
                 # validation study dob is within past 15 years
                 (!is.na(c220) & as.numeric(as.Date(max(unique(overall$int_date_sur))) - c220)/365.25 <= 15), 
-           1, 0)) %>%
+           1, 0),
+         subsampD = ifelse(type == "VS_Match" & pregout_dss == "Live birth" & c223 == "Live birth" &
+                             !((cstatus_dss == "Died" & cstatus_sur != "Died") |
+                                 (cstatus_dss != "Died" & cstatus_sur == "Died")), 1, 0)
+         ) %>%
   mutate(denomA = subsampA,
          denomB = subsampB,
-         denomC = ifelse(subsampC_dss == 1 | subsampC_sur == 1, 1, 0))
+         denomC = ifelse(subsampC_dss == 1 | subsampC_sur == 1, 1, 0),
+         denomD = subsampD)
 
 n_womA <- length(unique(subset(dat, denomA == 1)$rid_m))
 n_womB <- length(unique(subset(dat, denomB == 1)$rid_m))
 n_womC <- length(unique(subset(dat, denomC == 1)$rid_m))
+n_womD <- length(unique(subset(dat, denomD == 1)$rid_m))
 
 # Define function for agreement in total number of events -----------------
 
@@ -146,7 +153,7 @@ fn_aggAgreement <- function(dat, outcome, denom, plot = TRUE){
     ungroup() %>%
     mutate(denom = denom) %>%
     select(rid_m, n_sur, n_dss, denom)
-  
+
   # summarise for plot
   plotDat <- nAlllong %>%
     group_by(denom, n_sur, n_dss) %>%
@@ -997,7 +1004,7 @@ ggsave(
 # Numbers for sample -------------------------------------------------------
 
 
-datNum <- data.frame(subsample = c("all-women", "lifelong-residents", "recent-pregnancies"),
+datNum <- data.frame(subsample = c("all-women", "lifelong-residents", "recent-births"),
            nWomen = c(n_womA, n_womB, n_womC),
            nLb_dss = c(datLBa$n_dss, datLBb$n_dss, datLBc$n_dss),
            nLb_sur = c(datLBa$n_sur, datLBb$n_sur, datLBc$n_sur),
@@ -1005,4 +1012,124 @@ datNum <- data.frame(subsample = c("all-women", "lifelong-residents", "recent-pr
            nDth_sur = c(datDieda$n_sur, datDiedb$n_sur, datDiedc$n_sur))
 datNum
 write.csv(datNum, "./gen/audit/num1.csv", row.names = FALSE)
-         
+
+
+# UpSet: women -------------------------------------------------------------------
+
+# number of women
+# pairs
+n_womAB <- length(unique(subset(dat, denomA == 1 & denomB == 1)$rid_m))
+n_womAC <- length(unique(subset(dat, denomA == 1 & denomC == 1)$rid_m))
+n_womAD <- length(unique(subset(dat, denomA == 1 & denomD == 1)$rid_m))
+n_womBC <- length(unique(subset(dat, denomB == 1 & denomC == 1)$rid_m))
+n_womBD <- length(unique(subset(dat, denomB == 1 & denomD == 1)$rid_m))
+n_womCD <- length(unique(subset(dat, denomC == 1 & denomD == 1)$rid_m))
+# triples
+n_womABC <- length(unique(subset(dat, denomA == 1 & denomB == 1 & denomC == 1)$rid_m))
+n_womABD <- length(unique(subset(dat, denomA == 1 & denomB == 1 & denomD == 1)$rid_m))
+n_womACD <- length(unique(subset(dat, denomA == 1 & denomC == 1 & denomD == 1)$rid_m))
+n_womBCD <- length(unique(subset(dat, denomB == 1 & denomC == 1 & denomD == 1)$rid_m))
+# all four
+n_womABCD <- length(unique(subset(dat, denomA == 1 & denomB == 1 & denomC == 1 & denomD == 1)$rid_m))
+
+
+input <- c(
+  "All women"          = n_womA,
+  "Lifelong-residents"  = n_womB,
+  "Recent-births"      = n_womC,
+  "Matched-births"         = n_womD,
+  "All women&Lifelong-residents"                              = n_womAB,
+  "All women&Recent-births"                                  = n_womAC,
+  "All women&Matched-births"                                     = n_womAD,
+  "Lifelong-residents&Recent-births"                          = n_womBC,
+  "Lifelong-residents&Matched-births"                             = n_womBD,
+  "Recent-births&Matched-births"                                 = n_womCD,
+  "All women&Lifelong-residents&Recent-births"                = n_womABC,
+  "All women&Lifelong-residents&Matched-births"                   = n_womABD,
+  "All women&Recent-births&Matched-births"                       = n_womACD,
+  "Lifelong-residents&Recent-births&Matched-births"               = n_womBCD,
+  "All women&Lifelong-residents&Recent-births&Matched-births"     = n_womABCD
+)
+
+png("./gen/figures/manuscript/upset_women.png", width = 8, height = 6, units = "in", res = 300)
+upset(fromExpression(input), 
+      nintersects = 40, 
+      nsets = 4, 
+      order.by = "freq", 
+      decreasing = T, 
+      mb.ratio = c(0.6, 0.4),
+      number.angles = 0, 
+      text.scale = 1.2, 
+      point.size = 2.8, 
+      line.size = 1)
+grid::grid.text("Overlap of analytic subsamples at the woman-level", 
+                x = 0.02, y = 0.98, 
+                just = "left",
+                gp = grid::gpar(fontsize = 14
+                                #, fontface = "bold"
+                                ))
+#grid::grid.text("Women", x = 0.65, y = 0.97, gp = grid::gpar(fontsize = 14))
+dev.off()
+
+
+# UpSet: live births ------------------------------------------------------
+
+# singles
+n_lbA <- nrow(subset(dat, denomA == 1 & pregout_dss == "Live birth"))
+n_lbB <- nrow(subset(dat, denomB == 1 & pregout_dss == "Live birth"))
+n_lbC <- nrow(subset(dat, denomC == 1 & pregout_dss == "Live birth"))
+n_lbD <- nrow(subset(dat, denomD == 1 & pregout_dss == "Live birth"))
+# pairs
+n_lbAB <- nrow(subset(dat, denomA == 1 & denomB == 1 & pregout_dss == "Live birth"))
+n_lbAC <- nrow(subset(dat, denomA == 1 & denomC == 1 & pregout_dss == "Live birth"))
+n_lbAD <- nrow(subset(dat, denomA == 1 & denomD == 1 & pregout_dss == "Live birth"))
+n_lbBC <- nrow(subset(dat, denomB == 1 & denomC == 1 & pregout_dss == "Live birth"))
+n_lbBD <- nrow(subset(dat, denomB == 1 & denomD == 1 & pregout_dss == "Live birth"))
+n_lbCD <- nrow(subset(dat, denomC == 1 & denomD == 1 & pregout_dss == "Live birth"))
+# triples
+n_lbABC <- nrow(subset(dat, denomA == 1 & denomB == 1 & denomC == 1 & pregout_dss == "Live birth"))
+n_lbABD <- nrow(subset(dat, denomA == 1 & denomB == 1 & denomD == 1 & pregout_dss == "Live birth"))
+n_lbACD <- nrow(subset(dat, denomA == 1 & denomC == 1 & denomD == 1 & pregout_dss == "Live birth"))
+n_lbBCD <- nrow(subset(dat, denomB == 1 & denomC == 1 & denomD == 1 & pregout_dss == "Live birth"))
+# all four
+n_lbABCD <- nrow(subset(dat, denomA == 1 & denomB == 1 & denomC == 1 & denomD == 1 & pregout_dss == "Live birth"))
+
+input <- c(
+  "All-women"          = n_lbA,
+  "Lifelong-residents"  = n_lbB,
+  "Recent-births" = n_lbC,
+  "Matched-births"    = n_lbD,
+  "All-women&Lifelong-residents" = n_lbAB,
+  "All-women&Recent-births"    = n_lbAC,
+  "All-women&Matched-births"       = n_lbAD,
+  "Lifelong-residents&Recent-births" = n_lbBC,
+  "Lifelong-residents&Matched-births"    = n_lbBD,
+  "Recent-births&Matched-births"       = n_lbCD,
+  "All-women&Lifelong-residents&Recent-births" = n_lbABC,
+  "All-women&Lifelong-residents&Matched-births"    = n_lbABD,
+  "All-women&Recent-births&Matched-births"       = n_lbACD,
+  "Lifelong-residents&Recent-births&Matched-births"= n_lbBCD,
+  "All-women&Lifelong-residents&Recent-births&Matched-births" = n_lbABCD
+)
+
+
+png("./gen/figures/manuscript/upset_births.png", width = 8, height = 6, units = "in", res = 300)
+upset(fromExpression(input), 
+      nintersects = 40, 
+      nsets = 4, 
+      order.by = "freq", 
+      decreasing = T, 
+      mb.ratio = c(0.6, 0.4),
+      number.angles = 0, 
+      text.scale = 1.2, 
+      point.size = 2.8, 
+      line.size = 1)
+grid::grid.text("Overlap of analytic subsamples at the child-level", 
+                x = 0.02, y = 0.99, 
+                just = "left",
+                gp = grid::gpar(fontsize = 14
+                                #, fontface = "bold"
+                ))
+#grid::grid.text("Live births", x = 0.65, y = 0.97, gp = grid::gpar(fontsize = 14))
+dev.off()
+

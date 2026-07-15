@@ -36,20 +36,17 @@ source("./src/analysis/aggregate-agreement.R", local = new.env())
 source("./src/analysis/additions-omissions.R", local = new.env())
 source("./src/analysis/char-additions-omissions.R", local = new.env())
 source("./src/analysis/transfers.R", local = new.env())
+source("./src/analysis/misclassification.R", local = new.env())
 
 # regression
 source("./src/analysis/regression-additions-omissions.R", local = new.env())
 
+# audit
 source("./src/analysis/denom-check.R", local = new.env())
-
 
 # Other -------------------------------------------------------------------
 
 source("./src/sample-qualitative.R", local = new.env())
-
 source("./src/check-agreement.R", local = new.env())
-
 source("./src/paa-figures.R", local = new.env())
-
-# sample size for non-inferiority trial for natural language processing fph
 source("./src/sample-size-NLP-nFPH.R", local = new.env())

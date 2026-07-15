@@ -1,5 +1,6 @@
 ################################################################################
 #' @description Qualitative study sampling
+#' Note: I ended up doing the final sampling in an rmarkdown document in the /reports subfolder
 #' @return 
 ################################################################################
 #' Clear environment
@@ -8,16 +9,17 @@ rm(list = ls())
 library(tidyr)
 library(dplyr)
 #' Inputs
-overall <- readRDS("./gen/augment/overallDate-aug.rds")
+overall <- readRDS("./gen/augment/overallDate-recode.rds")
 ################################################################################
 
 # Limit to mothers with residency episodes starting more than 5 years prior
 # Want to limit to those with uninterrupted residency in past 5 years, but don't have that data yet.
-sort(unique(overall$int_date))
+sort(unique(overall$int_date_sur))
 as.Date("2024-12-07") - 5*365.25
 length(unique(overall$rid_m)) # 848
-v_mothers <- unique(subset(overall, mot_in_date <= as.Date("2020-01-01"))$rid_m)
+v_mothers <- unique(subset(overall, doi_m_dss <= as.Date("2020-01-01"))$rid_m)
 length(v_mothers) # 723
+
 
 # Identify mothers who have a match in the FPH for all events reported in the HDSS
 unique(overall$type)
@@ -82,7 +84,7 @@ length(v_mth_comp) # 471
 # age range
 tab1full <- overall %>%
   filter(rid_m %in% v_mth_comp) %>%
-  pivot_longer(cols = c(b114, matage_cat, paritycat_dss)) %>%
+  pivot_longer(cols = c(b114, magecat_int, paritymaxcat_dss)) %>%
   group_by(name, value) %>%
   summarise(n = n()) %>%
   mutate(value = as.character(value)) %>% 

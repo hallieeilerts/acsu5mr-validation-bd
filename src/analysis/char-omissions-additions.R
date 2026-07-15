@@ -49,7 +49,8 @@ dat <- overall %>%
 
 vars <- c(
   "birthorder_cat_comb", "paritymaxcat_comb", "birthrecency_cat", "deathrecency_cat",
-  "magecat2_int", "hhsizecat_sur", "hhassets_sur", 
+  "magecat2_int", "meducat_sur",
+  "hhsizecat_sur", "hhassets_sur", 
   "intinterupt_sur", "observer_sur", "intcoop_sur", "otherwork_sur",
   "breakdown_sur", "support_sur",
   "cstatus_agesp_comb", "cstrata_ac"
@@ -139,7 +140,7 @@ tabDth <- tabDth %>%
 v_hh <- c("hhsizecat_sur", "hhassets_sur", "observer_sur", "intinterupt_sur", "intcoop_sur", "breakdown_sur",
           "otherwork_sur", "support_sur")
 # women-level
-v_wom <- c("magecat2_int", "paritymaxcat_comb")
+v_wom <- c("magecat2_int", "meducat_sur", "paritymaxcat_comb")
 # child-level
 v_ch <- c("birthorder_cat_comb", "birthrecency_cat", "deathrecency_cat", "cstatus_agesp_comb", "cstrata_ac")
 v_all <- c(v_hh, v_wom, v_ch, "total")
@@ -163,6 +164,11 @@ tabDth <- tabDth %>%
     variable == "hhsizecat_sur" & value == "Small" ~ 1,
     variable == "hhsizecat_sur" & value == "Medium" ~ 2,
     variable == "hhsizecat_sur" & value == "Large" ~ 3,
+    variable == "meducat_sur" & value == "Missing" ~ 1,
+    variable == "meducat_sur" & value == "None" ~ 2,
+    variable == "meducat_sur" & value == "Primary" ~ 3,
+    variable == "meducat_sur" & value == "Secondary" ~ 4,
+    variable == "meducat_sur" & value == "Higher secondary" ~ 5,
     variable == "observer_sur" & value == "Missing" ~ 1,
     variable == "observer_sur" & value == "No one" ~ 1,
     variable == "observer_sur" & value == "Partial" ~ 2,
@@ -222,6 +228,7 @@ tabDth <- tabDth %>%
     variable == "otherwork_sur"  ~ "Respondent conducting other work during interview",
     variable == "support_sur"  ~ "Respondent received support from others",
     variable == "magecat2_int" ~ "Mother age",
+    variable == "meducat_sur" ~ "Mother education",
     variable == "paritymaxcat_comb" ~ "Mother parity",
     variable == "birthorder_cat_comb" ~ "Birth order",
     variable == "birthrecency_cat"   ~ "Birth recall period (years)",
@@ -270,7 +277,8 @@ doc <- read_docx() %>%
 
 vars <- c(
   "birthorder_cat_comb", "paritymaxcat_comb", "birthrecency_cat", "deathrecency_cat",
-  "magecat2_int", "hhsizecat_sur", "hhassets_sur", 
+  "magecat2_int", "meducat_sur",
+  "hhsizecat_sur", "hhassets_sur", 
   "intinterupt_sur", "observer_sur", "intcoop_sur", "otherwork_sur",
   "breakdown_sur", "support_sur",
   "cstatus_agesp_comb"
@@ -366,7 +374,7 @@ tabDth <- tabDth %>%
 v_hh <- c("hhsizecat_sur", "hhassets_sur", "observer_sur", "intinterupt_sur", "intcoop_sur", "breakdown_sur",
           "otherwork_sur", "support_sur")
 # women-level
-v_wom <- c("magecat2_int", "paritymaxcat_comb")
+v_wom <- c("magecat2_int", "meducat_sur", "paritymaxcat_comb")
 # child-level
 v_ch <- c("birthorder_cat_comb", "birthrecency_cat", "deathrecency_cat", "cstatus_agesp_comb") #  "cstatus_comb",
 v_all <- c(v_hh, v_wom, v_ch, "total")
@@ -390,6 +398,11 @@ tabDth <- tabDth %>%
     variable == "hhsizecat_sur" & value == "Small" ~ 1,
     variable == "hhsizecat_sur" & value == "Medium" ~ 2,
     variable == "hhsizecat_sur" & value == "Large" ~ 3,
+    variable == "meducat_sur" & value == "Missing" ~ 1,
+    variable == "meducat_sur" & value == "None" ~ 2,
+    variable == "meducat_sur" & value == "Primary" ~ 3,
+    variable == "meducat_sur" & value == "Secondary" ~ 4,
+    variable == "meducat_sur" & value == "Higher secondary" ~ 5,
     variable == "observer_sur" & value == "Missing" ~ 1,
     variable == "observer_sur" & value == "No one" ~ 1,
     variable == "observer_sur" & value == "Partial" ~ 2,
@@ -433,6 +446,7 @@ tabDth <- tabDth %>%
     variable == "otherwork_sur"  ~ "Respondent conducting other work during interview",
     variable == "support_sur"  ~ "Respondent received support from others",
     variable == "magecat2_int" ~ "Mother age",
+    variable == "meducat_sur" ~ "Mother education",
     variable == "paritymaxcat_comb" ~ "Mother parity",
     variable == "birthorder_cat_comb" ~ "Birth order",
     variable == "birthrecency_cat"   ~ "Birth recall period (years)",
@@ -501,6 +515,13 @@ tabDthComb %>%
 tabDthComb <- tabDthComb %>%
   filter(!(variable == "Respondent received support from others"))
 
+# add parentehsis to %
+tabDthComb$per_Omission <- paste0("(", tabDthComb$per_Omission, ")")
+tabDthComb$per_Addition <- paste0("(", tabDthComb$per_Addition, ")")
+
+# remove household wealth quintile
+tabDthComb <- tabDthComb %>% filter(variable != "Household wealth quintile")
+
 ft <- tabDthComb %>%
   flextable() %>%
   # set_header_labels(values = c("Variable", "Value", "N", "%", "N", "%", "p-value", "N", "%", "N", "%", "p-value")) %>%
@@ -508,10 +529,10 @@ ft <- tabDthComb %>%
   #                colwidths = c(2, 2, 2, 1, 2, 2, 1)) %>%
   # add_header_row(values = c(" ","All-women", "Recent-pregnancies"), 
   #                colwidths = c(2, 5, 5)) %>%
-  set_header_labels(values = c("Variable", "Value", "N", "%", "p-value", "N", "%", "p-value")) %>%
+  set_header_labels(values = c("Variable", "Value", "N", "(%)", "p-value", "N", "(%)", "p-value")) %>%
   add_header_row(values = c(" ","Omission", " ", "Addition", " "), 
                  colwidths = c(2, 2, 1, 2, 1)) %>%
-  add_header_row(values = c(" ","All-women", "Recent-pregnancies"), 
+  add_header_row(values = c(" ","All-women", "Recent-births"), 
                  colwidths = c(2, 3, 3)) %>%
   set_caption(caption = "") %>%
   merge_v(j = ~ variable + pvalcat_o + pvalcat_a) %>%
