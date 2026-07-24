@@ -11,6 +11,7 @@ library(haven)
 library(officer)
 library(ggplot2)
 library(flextable)
+library(ggh4x)
 #' Inputs
 overall <- readRDS("./gen/augment/overallName-recode.rds")
 ################################################################################
@@ -352,7 +353,7 @@ figdatB1 <- dat %>%
     type == "VS_Match" ~ "Match",
     TRUE ~ NA
   )) %>%
-  mutate(subsample = "Lifelong-resident",
+  mutate(subsample = "Lifelong-residents",
          event = "Live births")
 figdatB2 <- dat %>%
   filter(denomBlb == 1) %>%
@@ -367,7 +368,7 @@ figdatB2 <- dat %>%
     type == "VS_Match" ~ "Match",
     TRUE ~ NA
   )) %>%
-  mutate(subsample = "Lifelong-resident",
+  mutate(subsample = "Lifelong-residents",
          event = "Child surviving")
 figdatB3 <- dat %>%
   filter(denomB == 1) %>%
@@ -381,7 +382,7 @@ figdatB3 <- dat %>%
     type == "VS_Match" ~ "Match",
     TRUE ~ NA
   )) %>%
-  mutate(subsample = "Lifelong-resident",
+  mutate(subsample = "Lifelong-residents",
          event = "Child died")
 figdatB <- rbind(figdatB1, figdatB2, figdatB3)
 figdatB <- figdatB %>%
@@ -400,7 +401,7 @@ figdatC1 <- dat %>%
     type == "VS_Match" ~ "Match",
     TRUE ~ NA
   )) %>%
-  mutate(subsample = "Recent-pregnancies",
+  mutate(subsample = "Recent-births",
          event = "Live births")
 figdatC2 <- dat %>%
   filter(denomClb == 1) %>%
@@ -415,7 +416,7 @@ figdatC2 <- dat %>%
     type == "VS_Match" ~ "Match",
     TRUE ~ NA
   )) %>%
-  mutate(subsample = "Recent-pregnancies",
+  mutate(subsample = "Recent-births",
          event = "Child surviving")
 figdatC3 <- dat %>%
   filter(denomC == 1) %>%
@@ -429,7 +430,7 @@ figdatC3 <- dat %>%
     type == "VS_Match" ~ "Match",
     TRUE ~ NA
   )) %>%
-  mutate(subsample = "Recent-pregnancies",
+  mutate(subsample = "Recent-births",
          event = "Child died")
 figdatC <- rbind(figdatC1, figdatC2, figdatC3)
 figdatC <- figdatC %>%
@@ -446,6 +447,19 @@ totals <- allfigdat %>%
   mutate(name = "N") %>%
   mutate(name = factor(name, levels = c("N", "%")))
 
+# numbers for paper
+allfigdat %>% filter(type == "Omission" & event == "Live births" & subsample == "All-women")
+allfigdat %>% filter(type == "Omission" & event == "Child died" & subsample == "All-women")
+allfigdat %>% filter(type == "Omission" & event == "Child surviving" & subsample == "All-women")
+
+allfigdat %>% filter(type == "Match" & event == "Live births" & subsample == "Lifelong-residents")
+allfigdat %>% filter(type == "Omission" & event == "Live births" & subsample == "Lifelong-residents")
+allfigdat %>% filter(type == "Addition" & event == "Live births" & subsample == "Lifelong-residents")
+
+allfigdat %>% filter(type == "Match" & event == "Live births" & subsample == "Recent-births")
+allfigdat %>% filter(type == "Omission" & event == "Live births" & subsample == "Recent-births")
+allfigdat %>% filter(type == "Addition" & event == "Live births" & subsample == "Recent-births")
+allfigdat %>% filter(type == "Omission" & event == "Child died" & subsample == "Recent-births")
 
 # Figure: matches, omissions, and additions -------------------------------
 
@@ -470,14 +484,169 @@ myplot <- allfigdat %>%
     color = "white"
   ) +
   coord_flip() +
-  facet_grid(subsample ~ name, scales = "free") +
+  facet_grid(subsample ~ name, scales = "free", switch = "x") +
   labs(x = "", y = "", title = "Matching of live births in HDSS with FPH") +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  facetted_pos_scales(
+    y = list(
+      name == "N" ~ scale_y_continuous(expand = expansion(mult = c(0, 0.1))),
+      name != "N" ~ scale_y_continuous(expand = expansion(mult = c(0, 0)))
+    )
+  ) +
   scale_fill_viridis_d(option = "plasma", direction = -1, begin = 0.1, end = 0.8, name = "") +
-  theme(legend.position = "bottom")
+  theme_minimal() +
+  theme(
+    strip.placement = "outside",
+    strip.text.x = element_text(face = "bold"),
+    legend.position = "bottom"
+  )
 myplot
 ggsave("./gen/figures/fig-matching.png", myplot, width = 8, height = 5, dpi = 500)
 
+
+
+# Figure with all horizontal text -----------------------------------------
+
+p1 <- allfigdat %>%
+  filter(subsample == "All-women") %>%
+  mutate(event = factor(event, levels = c("Child died", "Child surviving", "Live births"))) %>%
+  mutate(type = factor(type, levels = c("Addition", "Omission", "Match"))) %>%
+  mutate(label = ifelse(name == "N", value, round(value, 0))) %>%
+  ggplot() +
+  geom_bar(aes(x = event, y = value, fill = type), stat = "identity", position = "stack") +
+  geom_text(
+    data = totals %>% filter(subsample == "All-women"),
+    aes(x = event, y = total, label = total),
+    hjust = -0.05,
+    size = 3
+  ) +
+  geom_text(
+    data = ~subset(.x, name == "%"),
+    aes(x = event, y = value, label = label, group = type),
+    position = position_stack(vjust = 0.5),
+    size = 3,
+    color = "white"
+  ) +
+  coord_flip() +
+  facet_wrap(~name, scales = "free_x", switch = "x") +
+  labs(x = "", y = "", subtitle = "All-women") +
+  facetted_pos_scales(
+    y = list(
+      name == "N" ~ scale_y_continuous(expand = expansion(mult = c(0, 0.1))),
+      name != "N" ~ scale_y_continuous(expand = expansion(mult = c(0, 0)))
+    )
+  ) +
+  scale_fill_viridis_d(option = "plasma", direction = -1, begin = 0.1, end = 0.8, name = "") +
+  theme_minimal() +
+  theme(
+    strip.placement = "outside",
+    strip.text.x = element_blank(),
+    legend.position = "none",
+    text = element_text(color = "black"),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black"),
+    strip.text = element_text(color = "black", face = "bold", hjust = 0.5),
+    plot.title = element_text(color = "black"),
+    plot.subtitle = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
+  )
+p2 <- allfigdat %>%
+  filter(subsample == "Lifelong-residents") %>%
+  mutate(event = factor(event, levels = c("Child died", "Child surviving", "Live births"))) %>%
+  mutate(type = factor(type, levels = c("Addition", "Omission", "Match"))) %>%
+  mutate(label = ifelse(name == "N", value, round(value, 0))) %>%
+  ggplot() +
+  geom_bar(aes(x = event, y = value, fill = type), stat = "identity", position = "stack") +
+  geom_text(
+    data = totals %>% filter(subsample == "Lifelong-residents"),
+    aes(x = event, y = total, label = total),
+    hjust = -0.05,
+    size = 3
+  ) +
+  geom_text(
+    data = ~subset(.x, name == "%"),
+    aes(x = event, y = value, label = label, group = type),
+    position = position_stack(vjust = 0.5),
+    size = 3,
+    color = "white"
+  ) +
+  coord_flip() +
+  facet_wrap(~name, scales = "free_x", switch = "x") +
+  labs(x = "", y = "", subtitle = "Lifelong-residents") +
+  facetted_pos_scales(
+    y = list(
+      name == "N" ~ scale_y_continuous(expand = expansion(mult = c(0, 0.1))),
+      name != "N" ~ scale_y_continuous(expand = expansion(mult = c(0, 0)))
+    )
+  ) +
+  scale_fill_viridis_d(option = "plasma", direction = -1, begin = 0.1, end = 0.8, name = "") +
+  theme_minimal() +
+  theme(
+    strip.placement = "outside",
+    strip.text.x = element_blank(),
+    legend.position = "none",
+    text = element_text(color = "black"),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black"),
+    strip.text = element_text(color = "black", face = "bold", hjust = 0.5),
+    plot.title = element_text(color = "black"),
+    plot.subtitle = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
+  )
+
+p3 <- allfigdat %>%
+  filter(subsample == "Recent-births") %>%
+  mutate(event = factor(event, levels = c("Child died", "Child surviving", "Live births"))) %>%
+  mutate(type = factor(type, levels = c("Addition", "Omission", "Match"))) %>%
+  mutate(label = ifelse(name == "N", value, round(value, 0))) %>%
+  ggplot() +
+  geom_bar(aes(x = event, y = value, fill = type), stat = "identity", position = "stack") +
+  geom_text(
+    data = totals %>% filter(subsample == "Recent-births"),
+    aes(x = event, y = total, label = total),
+    hjust = -0.05,
+    size = 3
+  ) +
+  geom_text(
+    data = ~subset(.x, name == "%"),
+    aes(x = event, y = value, label = label, group = type),
+    position = position_stack(vjust = 0.5),
+    size = 3,
+    color = "white"
+  ) +
+  coord_flip() +
+  facet_wrap(~name, scales = "free_x", switch = "x") +
+  labs(x = "", y = "", subtitle = "Recent-births") +
+  facetted_pos_scales(
+    y = list(
+      name == "N" ~ scale_y_continuous(expand = expansion(mult = c(0, 0.1))),
+      name != "N" ~ scale_y_continuous(expand = expansion(mult = c(0, 0)))
+    )
+  ) +
+  scale_fill_viridis_d(option = "plasma", direction = -1, begin = 0.1, end = 0.8, name = "") +
+  theme_minimal() +
+  theme(
+    strip.placement = "outside",
+    legend.position = "bottom",
+    text = element_text(color = "black"),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black"),
+    strip.text = element_text(color = "black", face = "bold", hjust = 0.5),
+    plot.title = element_text(color = "black"),
+    plot.subtitle = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
+  )
+
+combined_plot <- p1 / p2 / p3
+ggsave(
+  filename = "./gen/figures/fig-matching-v2.png",
+  plot = combined_plot,
+  width = 8,
+  height = 5,
+  dpi = 500
+)
 
 # PAA figure: matching, omissions, additions ------------------------------
 
