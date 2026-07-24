@@ -12,8 +12,6 @@
 
 # Cleaning ----------------------------------------------------------------
 
-# now working with processed spreadsheets shared by icddr,b team
-
 source("./src/clean/basic-exploration.R", local = new.env())
 source("./src/clean/prep-survey.R", local = new.env())
 source("./src/clean/prep-hdss.R", local = new.env())

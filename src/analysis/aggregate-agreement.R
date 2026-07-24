@@ -191,7 +191,12 @@ myplot1 <- plotDat %>%
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 myplot1
 #ggsave("./gen/figures/agg-agree-LB.png", myplot1, width = 4, height = 2.5, dpi = 500) # formerly 8 and 4
@@ -210,7 +215,12 @@ myplot2 <- plotDat %>%
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 #ggsave("./gen/figures/agg-agree-SB.png", myplot2, width = 4, height = 2.5, dpi = 500)
 
@@ -223,12 +233,17 @@ myplot3 <- plotDat %>%
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = unique(plotDat$outcome), x = "FPH", y = "HDSS") +
-  coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
+  coord_cartesian(ylim = c(-0.3, 3.3), xlim = c(-0.3, 3.3)) +
   theme_bw() +
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 #ggsave("./gen/figures/agg-agree-MSC.png", myplot3, width = 4, height = 2.5, dpi = 500)
 
@@ -246,7 +261,12 @@ myplot4 <- plotDat %>%
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 #ggsave("./gen/figures/agg-agree-AB.png", myplot4, width = 4, height = 2.5, dpi = 500)
 
@@ -264,7 +284,12 @@ myplot5 <- plotDat %>%
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 #ggsave("./gen/figures/agg-agree-Neonatal.png", myplot5, width = 4, height = 2.5, dpi = 500)
 
@@ -282,7 +307,12 @@ myplot6 <- plotDat %>%
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 #ggsave("./gen/figures/agg-agree-Postneonatal.png", myplot6, width = 4, height = 2.5, dpi = 500)
 
@@ -300,7 +330,12 @@ myplot7 <- plotDat %>%
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 #ggsave("./gen/figures/agg-agree-Child.png", myplot7, width = 4, height = 2.5, dpi = 500)
 
@@ -318,7 +353,12 @@ myplot8 <- plotDat %>%
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 #ggsave("./gen/figures/agg-agree-OlderChild.png", myplot8, width = 4, height = 2.5, dpi = 500)
 
@@ -336,7 +376,12 @@ myplot9 <- plotDat %>%
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 #ggsave("./gen/figures/agg-agree-surviving.png", myplot9, width = 4, height = 2.5, dpi = 500)
 
@@ -349,24 +394,31 @@ myplot10 <- plotDat %>%
   scale_x_continuous(breaks = seq(min(plotDat$n_sur), max(plotDat$n_sur), by = 1)) +
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = "Non-surviving children", x = "FPH", y = "HDSS") +
-  coord_cartesian(ylim = c(-0.2, 4.2), xlim = c(-0.2, 4.2)) +
+  coord_cartesian(ylim = c(-0.3, 3.3), xlim = c(-0.3, 3.3)) +
   theme_bw() +
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 #ggsave("./gen/figures/agg-agree-died.png", myplot10, width = 4, height = 2.5, dpi = 500)
 
-
 plots <- list(
-  myplot1, myplot2, myplot3, myplot4, myplot5,
+  myplot1, 
+  #myplot9, 
+  myplot10,
+  #myplot2, myplot3, myplot4, 
+  myplot5,
   myplot6, myplot7, myplot8#, 
-  #myplot9, myplot10
 )
 combined_plot <- ggarrange(
   plotlist = plots,
-  ncol = 2, nrow = 4,
+  ncol = 2, nrow = 3,
   common.legend = TRUE,
   legend = "bottom"
 )
@@ -391,11 +443,16 @@ myplot1 <- plotDat %>%
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), 5, by = 1)) +
   labs(title = unique(plotDat$outcome), x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.2, 5.2), xlim = c(-0.2, 5.2)) +
-  theme_bw() +
+  theme_bw()  +
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 myplot1
 #ggsave("./gen/figures/agg-agree-LB.png", myplot1, width = 4, height = 2.5, dpi = 500) # formerly 8 and 4
@@ -410,11 +467,16 @@ myplot2 <- plotDat %>%
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = unique(plotDat$outcome), x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
-  theme_bw() +
+  theme_bw()  +
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 myplot2
 #ggsave("./gen/figures/agg-agree-SB.png", myplot2, width = 4, height = 2.5, dpi = 500)
@@ -431,11 +493,16 @@ myplot3 <- plotDat %>%
   labs(title = unique(plotDat$outcome), x = "FPH", y = "HDSS") +
   #coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
   coord_cartesian(ylim = c(-0.1, 7.1), xlim = c(-0.1, 7.1)) +
-  theme_bw() +
+  theme_bw()  +
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 myplot3
 #ggsave("./gen/figures/agg-agree-MSC.png", myplot3, width = 4, height = 2.5, dpi = 500)
@@ -450,11 +517,16 @@ myplot4 <- plotDat %>%
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), 2, by = 1)) +
   labs(title = unique(plotDat$outcome), x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
-  theme_bw() +
+  theme_bw()  +
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 myplot4
 #ggsave("./gen/figures/agg-agree-AB.png", myplot4, width = 4, height = 2.5, dpi = 500)
@@ -469,11 +541,16 @@ myplot5 <- plotDat %>%
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = "Neonatal death", x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.3, 3.3), xlim = c(-0.3, 3.3)) +
-  theme_bw() +
+  theme_bw()  +
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 myplot5
 #ggsave("./gen/figures/agg-agree-Neonatal.png", myplot5, width = 4, height = 2.5, dpi = 500)
@@ -488,11 +565,16 @@ myplot6 <- plotDat %>%
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = "Postneonatal death", x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
-  theme_bw() +
+  theme_bw()  +
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 myplot6
 #ggsave("./gen/figures/agg-agree-Postneonatal.png", myplot6, width = 4, height = 2.5, dpi = 500)
@@ -507,11 +589,16 @@ myplot7 <- plotDat %>%
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = "1-4y death", x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.3, 2.3), xlim = c(-0.3, 2.3)) +
-  theme_bw() +
+  theme_bw()  +
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 myplot7
 #ggsave("./gen/figures/agg-agree-Child.png", myplot7, width = 4, height = 2.5, dpi = 500)
@@ -526,11 +613,16 @@ myplot8 <- plotDat %>%
   scale_y_continuous(breaks = seq(min(plotDat$n_dss), max(plotDat$n_dss), by = 1)) +
   labs(title = "5-9y death", x = "FPH", y = "HDSS") +
   coord_cartesian(ylim = c(-0.3, 1.3), xlim = c(-0.3, 1.3)) +
-  theme_bw() +
+  theme_bw()  +
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 myplot8
 #ggsave("./gen/figures/agg-agree-OlderChild.png", myplot8, width = 4, height = 2.5, dpi = 500)
@@ -546,11 +638,16 @@ myplot9 <- plotDat %>%
   labs(title = "Surviving children", x = "FPH", y = "HDSS") +
   #coord_cartesian(ylim = c(-0.1, 6.1), xlim = c(-0.1, 6.1)) +
   coord_cartesian(ylim = c(-0.2, 4.2), xlim = c(-0.2, 4.2)) +
-  theme_bw() +
+  theme_bw()  +
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 myplot9
 #ggsave("./gen/figures/agg-agree-surviving.png", myplot9, width = 4, height = 2.5, dpi = 500)
@@ -569,20 +666,27 @@ myplot10 <- plotDat %>%
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_line(color = "black", linewidth = 0.3),
-    text = element_text(size = 10)
+    text = element_text(color = "black", size = 10),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
   )
 myplot10
 #ggsave("./gen/figures/agg-agree-died.png", myplot10, width = 4, height = 2.5, dpi = 500)
 
 
 plots <- list(
-  myplot1, myplot2, myplot3, myplot4, myplot5,
+  myplot1, myplot10,
+  #myplot2, myplot3, myplot4, 
+  myplot5,
   myplot6, myplot7, myplot8#, 
   #myplot9, myplot10
 )
 combined_plot <- ggarrange(
   plotlist = plots,
-  ncol = 2, nrow = 4,
+  ncol = 2, nrow = 3,
   common.legend = TRUE,
   legend = "bottom"
 )
@@ -779,21 +883,24 @@ datTabAll <- rbind(datTabAllA, datTabAllB, datTabAllC)
 
 myplot <- datTabAll %>%
   filter(denom %in% c("A", "B", "C")) %>%
+  filter(!(outcome %in% c("Pregnancy","Stillbirth", "Miscarriage", "Abortion"))) %>%
   mutate(denom = case_when(
     denom == "A" ~ "All-women", 
-    denom == "B" ~ "Lifelong-resident", 
-    denom == "C" ~ "Recent-pregnancies", 
+    denom == "B" ~ "Lifelong-residents", 
+    denom == "C" ~ "Recent-births", 
     TRUE ~ denom
   )) %>%
   mutate(denom = factor(denom, levels = c("All-women",
-                                          "Lifelong-resident", 
-                                          "Recent-pregnancies"))) %>% 
+                                          "Lifelong-residents", 
+                                          "Recent-births"))) %>% 
   pivot_longer(cols = c(n_sur, n_dss), names_to = "n") %>%
   mutate(n = ifelse(n == "n_dss", "HDSS", "FPH")) %>%
   mutate(n = factor(n, levels = c("FPH", "HDSS"))) %>%
-  mutate(outcome = factor(outcome, levels = rev(c("Pregnancy","Live birth",
-       "Stillbirth","Miscarriage","Abortion","Neonatal death", "Postneonatal death",
-       "1-4y death","5-9y death","Surviving children", "Non-surviving children")))) %>%
+  mutate(outcome = factor(outcome, levels = rev(c(#"Pregnancy",
+        "Live birth","Surviving children", "Non-surviving children",
+       #"Stillbirth","Miscarriage","Abortion",
+       "Neonatal death", "Postneonatal death",
+       "1-4y death","5-9y death")))) %>%
   ggplot() +
   geom_bar(aes(x = outcome, y = value, fill = n), 
            stat = "identity", position = "dodge") +
@@ -801,12 +908,24 @@ myplot <- datTabAll %>%
     position = position_dodge(width = 0.9), hjust = -0.1, size = 3) +
   scale_fill_manual(values = scales::viridis_pal(option = "plasma")(4)[2:3], name = "",
                     guide = guide_legend(reverse = TRUE)) +
-  labs(y = "N events", x = "") +
+  labs(y = "N", x = "", subtitle = "a. Total") +
   facet_wrap(~denom, labeller = label_wrap_gen(40)) +
   coord_flip(
     ylim = c(0, 3100)
     ) +
-  theme(legend.position = "bottom")
+  theme_minimal() +
+  theme(
+    strip.placement = "outside",
+    strip.text = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.position = "bottom",
+    text = element_text(color = "black"),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black"),
+    plot.subtitle = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
+  )
 myplot
 ggsave("./gen/figures/total-events-bysource.png", myplot, width = 8, height = 3.5, dpi = 500)
 
@@ -814,6 +933,7 @@ ggsave("./gen/figures/total-events-bysource.png", myplot, width = 8, height = 3.
 # relative difference dss to fph
 myplot <- datTabAll %>%
   filter(denom %in% c("A", "B", "C")) %>%
+  filter(!(outcome %in% c("Pregnancy","Stillbirth", "Miscarriage", "Abortion"))) %>%
   mutate(denom = case_when(
     denom == "A" ~ "All-women", 
     denom == "B" ~ "Lifelong-resident", 
@@ -824,17 +944,33 @@ myplot <- datTabAll %>%
                                           "Lifelong-resident", 
                                           "Recent-pregnancies"))) %>% 
   mutate(reldif =  100 * (n_sur - n_dss)/n_dss) %>%
-   mutate(outcome = factor(outcome, levels = rev(c("Pregnancy","Live birth",
-       "Stillbirth","Miscarriage","Abortion","Neonatal death", "Postneonatal death",
-       "1-4y death","5-9y death","Surviving children", "Non-surviving children")))) %>%
+  mutate(outcome = factor(outcome, levels = rev(c(#"Pregnancy",
+    "Live birth","Surviving children", "Non-surviving children",
+    #"Stillbirth","Miscarriage","Abortion",
+    "Neonatal death", "Postneonatal death",
+    "1-4y death","5-9y death")))) %>%
   ggplot() +
   geom_bar(aes(x = outcome, y = reldif), stat = "identity") +
   geom_hline(aes(yintercept = 0), color = "red") +
-  labs(y = "Relative difference (reference = HDSS)", x = "") +
+  labs(y = "% (reference = HDSS)", x = "", subtitle= "b. Relative difference") +
   facet_wrap(~denom, labeller = label_wrap_gen(40)) +
+  scale_y_continuous(breaks = c(-5,0,5,10)) +
   coord_flip(
     #ylim = c(0, 3100)
-  ) 
+  ) +
+  theme_minimal() +
+  theme(
+    strip.placement = "outside",
+    strip.text = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.position = "bottom",
+    text = element_text(color = "black"),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(color = "black", face = "bold"),
+    plot.title = element_text(color = "black"),
+    plot.subtitle = element_text(color = "black", face = "bold", hjust = 0.5),
+    legend.text = element_text(color = "black"),
+    legend.title = element_text(color = "black")
+  )
 myplot
 ggsave("./gen/figures/total-events-bysource-reldif.png", myplot, width = 8, height = 3, dpi = 500)
 
@@ -842,7 +978,7 @@ ggsave("./gen/figures/total-events-bysource-reldif.png", myplot, width = 8, heig
 datTabAll %>%
   filter(denom %in% c("A", "B", "C")) %>%
   mutate(reldif =  100 * (n_sur - n_dss)/n_dss) %>%
-  filter(denom %in% c("B", "C") & outcome %in% c("Pregnancy", "Live birth", "Non-surviving children"))
+  filter(denom %in% c("B", "C") & outcome %in% c("Live birth", "Non-surviving children"))
 
 datTabAll %>%
   filter(denom %in% c("A", "B", "C")) %>%
