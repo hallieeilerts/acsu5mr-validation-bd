@@ -25,7 +25,7 @@ subset(df_uniq_vals, n == nrow(overall))
 # there is currently no variable that serves as a unique identifier
 
 # do all observations have a mother_id?
-nrow(overall) # 2409
+nrow(overall) # 2280
 length(unique(overall$rid_m)) # 841
 nrow(subset(overall, is.na(rid_m))) # 0
 # yes. make sure they do at the end of this script once file has been augmented.
@@ -38,8 +38,18 @@ overall$type <- NA
 overall$type[!is.na(overall$match_score)] <- "VS_Match"
 overall$type[is.na(overall$match_score)] <- "VS_NoMatch"
 overall$type[is.na(overall$match_score) & is.na(overall$uid_c_sur)] <- "HDSS_NoMatch"
-table(overall$match_score, useNA = "always") # 1968 1, 441 NA
-table(overall$type, useNA = "always") # 186 hdss no match, 1968 vs match, 255 vs no match, 0 NA
+table(overall$match_score, useNA = "always") # 2097 1, 183 NA
+table(overall$type, useNA = "always") # 57 hdss no match, 2097 VS match, 126 VS no match
+
+#OLD
+# 1968 1, 441 NA
+#NEW
+# 2097 1, 183 NA
+
+#OLD
+# 186 hdss no match, 1968 vs match, 255 vs no match
+#WITH NEW DOB/SEX MATCHES
+# 57 hdss no match, 2097 VS match, 126 VS no match
 
 # for every matched case, make sure there is child status information from dss
 nrow(subset(overall, type == "VS_Match" & is.na(cstatus_dss)))   # 0
@@ -67,7 +77,7 @@ overall %>%
 # in overallDate, parity_dss from the hdss file is merged on, but still missing for unmatched survey observations (485 in that file)
 # here it's actually missing for even fewer than that.
 nrow(subset(overall, type == "VS_Match" & is.na(parity_dss)))   # 0
-nrow(subset(overall, type == "VS_NoMatch" & is.na(parity_dss))) # 254
+nrow(subset(overall, type == "VS_NoMatch" & is.na(parity_dss))) # 125
 
 # Categorize icd codes ------------------------------------------------------
 
@@ -335,6 +345,7 @@ hdss_nomatch <- hdss_nomatch %>%
 nrow(subset(hdss_nomatch, is.na(mstrata_ac))) # 0
 
 # add type variable
+hdss_nomatch$type <- NA
 hdss_nomatch$type[hdss_nomatch$pregout_dss == "Miscarriage"] <- "HDSS_MSC"
 hdss_nomatch$type[hdss_nomatch$pregout_dss == "Abortion"] <- "HDSS_AB"
 hdss_nomatch$type[hdss_nomatch$pregout_dss == "Stillbirth"] <- "HDSS_STB"
@@ -408,23 +419,24 @@ cod_fill <- overall_aug1 %>%
     TRUE ~ cstrata_ac
   )) %>%
   select(-n)
-nrow(cod_fill) # 27
-nrow(subset(cod_fill, !is.na(cstrata_ac))) # 5
-# 5 were able to be filled in
+nrow(cod_fill) # 28
+nrow(subset(cod_fill, !is.na(cstrata_ac))) # 2
+# 2 were able to be filled in
 overall_aug1 <- rbind(subset(overall_aug1, !(recnr %in% cod_fill$recnr)), cod_fill)
-nrow(overall_aug1) # 2760
+nrow(overall_aug1) # 2631
 
 # now there are still some missing cstrata_ac
 overall_aug1 %>%
   filter(type %in% c("VS_Match", "HDSS_NoMatch")) %>% 
-  filter(!is.na(mstrata_ac) & is.na(cstrata_ac)) %>% nrow() # 22
+  filter(!is.na(mstrata_ac) & is.na(cstrata_ac)) %>% nrow() # 26
 # there missing ones are for non-matched events from the validation study
 # and missing ones for matched events that had NA, R99, or MH14 COD
 overall_aug1 %>%
   filter(is.na(cstrata_ac)) %>% 
   group_by(type) %>%
-  summarise(n = n()) # 254 VS_NoMatch, 18 VS_Match, 5 HDSS_NoMatch
-nrow(subset(overall_aug1, is.na(cstrata_ac))) # 277
+  summarise(n = n()) # 126 VS_NoMatch, 22 VS_Match, 4 HDSS_NoMatch
+# before sex/dob matches: # 254 VS_NoMatch, 18 VS_Match, 5 HDSS_NoMatch
+nrow(subset(overall_aug1, is.na(cstrata_ac))) # 152
 
 # addition from the validation study will have unknown COD always
 # missing CODs in dss will be unknown

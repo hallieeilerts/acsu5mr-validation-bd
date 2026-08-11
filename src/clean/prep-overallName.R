@@ -489,8 +489,7 @@ datnew <- datnew[order(datnew$rid_m, datnew$c220),]
 datnew$recnr <- NULL
 dat <- datnew
 
-
-# Fix incorrect matches ---------------------------------------------------
+# Unmatch: fix incorrect matches ---------------------------------------------------
 
 # when survival status doesn't match and dob is more than 4 years different
 dat %>%
@@ -540,9 +539,10 @@ v_sur <- c("serial", "sample", "sample2",  "cid_m",
            "d5", "d6", "d7", "d8", "d9", "d10", "d10_a", "d10_a1",
            "d10_a2", "d10_a3", "d10_a4", "d10_a5", "d10_a6", "d10_a_1", "d10_a_2", "d11",
            "d11_a", "d12", "d12_a", "d12_a1", "d12_a2", "d12_a3", "d12_a4", "d12_a_1",
-           "d13", "d13_a", "d14", "parity_n_sur", "recnr")
-# dss variables
+           "d13", "d13_a", "d14", "parity_n_sur", 
+           "recnr")
 
+# dss variables
 v_dss <- c("rid_c",
            "uid_c_dss", 
            "po", "name_c", "sex_c", "dob_c", "dod_c", "CCOD")
@@ -563,6 +563,164 @@ df_unmatch_sur <- df_unmatch %>%
 datnew <- rbind(df_other, df_unmatch_dss, df_unmatch_sur )
 nrow(dat) + 1 == nrow(datnew)  # TRUE
 datnew <- datnew[order(datnew$rid_m, datnew$c220),]
+datnew$recnr <- NULL
+dat <- datnew
+
+
+# Match: add new matches by name and DOB ---------------------------------------------------------
+
+dat <- dat %>%
+  mutate(recnr = 1:n())
+
+# mothers with additions
+v_addition_moms <- subset(dat, match_n2 == "Only in survey")$rid_m
+# mothers that also have omissions
+v_omission_moms <- subset(dat, match_n2 == "Only in DSS")$rid_m
+# get intersection to check for new matches
+v_intersection <- intersect(v_addition_moms, v_omission_moms)
+
+# dat %>%
+#   filter(rid_m %in% v_intersection) %>%
+#   filter(match_n2 != "In both") %>%
+#   select(rid_m, match_n2, po, name_c, sex_c, dob_c, dod_c, 
+#          c215, c218, c219, c220, c223, c224) %>%
+#   View()
+
+# Subset to eligible mothers and births
+base <- dat %>%
+  mutate(sex_c = as.character(sex_c),
+         c219 = as.character(c219)) %>%
+  filter(rid_m %in% v_intersection) %>%
+  filter(match_n2 != "In both") %>%
+  select(recnr, rid_m, match_n2, po, name_c, sex_c, dob_c, dod_c, 
+         c215, c218, c219, c220, c223, c224, c228, c228_aa, c228_bb, c228_ccc) %>%
+  mutate(dob_c = as.Date(dob_c))
+
+# self-join within rid_m to get all row pairs
+pairs <- base %>%
+  inner_join(base, by = "rid_m", suffix = c("_1", "_2")) %>%
+  filter(recnr_1 != recnr_2) %>%   # each pair once, no self-compare
+  mutate(
+    c220_2 = as.Date(c220_2),
+    sex_match = sex_c_1 == c219_2,
+    dob_diff  = abs(as.numeric(difftime(dob_c_1, c220_2, units = "days"))),
+    dob_match = dob_diff <= 31,
+    potential_match = sex_match & dob_match
+  )
+# pairs %>%
+#   select(rid_m, name_c_1, c218_2, dob_c_1, c220_2, sex_c_1, c219_2) %>% View()
+
+
+# filter those with same sex and similar dob
+potential_matches <- pairs %>%
+  filter(potential_match) %>%
+  select(rid_m, recnr_1, recnr_2,
+         name_c_1, c218_2, 
+         sex_c_1,  c219_2, 
+         dob_c_1, c220_2, 
+         dob_diff,
+         c223_2, po_1, 
+         dod_c_1,
+         c228_2, c228_aa_2, c228_bb_2, c228_ccc_2)
+#potential_matches %>% View()
+
+# recnr_1 = row to KEEP (the DSS/omission row, gets survey vars filled in)
+# recnr_2 = row to DROP (the survey/addition row, its data gets copied then removed)
+matches_to_apply <- potential_matches %>%
+  select(rid_m, recnr_1, recnr_2) %>%
+  distinct()
+nrow(matches_to_apply)
+ # 131
+
+# does any recnr_2 (row to be dropped) show up in more than one match?
+# i.e. one survey row potentially matching multiple DSS rows
+matches_to_apply %>%
+  count(recnr_2) %>%
+  filter(n > 1) %>% 
+  nrow() # 2
+# does any recnr_1 (row to be kept) show up in more than one match?
+# i.e. one DSS row potentially matching multiple survey rows
+matches_to_apply %>%
+  count(recnr_1) %>%
+  filter(n > 1) %>%
+  nrow() # 2
+dat %>%
+  filter(recnr %in% c(674, 675, 676, 677)) %>%
+  select(recnr, rid_m, po, name_c, sex_c, dob_c, dod_c, c218, c219, c220, c223, c224)
+
+# twins
+# manually resolve the ambiguous twin pair
+# look at the printout above and decide which survey row (674/675) goes with which DSS row (676/677)
+# EDIT the pairing below to match what you see - this is just a placeholder based on record order
+manual_pairs <- tribble(
+  ~rid_m,        ~recnr_1, ~recnr_2,
+  "3D94038206",  676,      674,   # DSS row 676 = survey row 674
+  "3D94038206",  677,      675    # DSS row 677 = survey row 675
+)
+manual_pairs <- manual_pairs %>%
+  mutate(rid_m = dat$rid_m[dat$recnr == 676][1])
+
+# remove the ambiguous pairs, replace with manual decision
+ambiguous_recnr1 <- matches_to_apply %>% count(recnr_1) %>% filter(n > 1) %>% pull(recnr_1)
+ambiguous_recnr2 <- matches_to_apply %>% count(recnr_2) %>% filter(n > 1) %>% pull(recnr_2)
+
+matches_to_apply <- matches_to_apply %>%
+  filter(!(recnr_1 %in% ambiguous_recnr1 | recnr_2 %in% ambiguous_recnr2)) %>%
+  bind_rows(manual_pairs)
+
+# sanity check: should now be no duplicates on either side
+matches_to_apply %>% count(recnr_1) %>% filter(n > 1) %>% nrow() # 0
+matches_to_apply %>% count(recnr_2) %>% filter(n > 1) %>% nrow() # 0
+nrow(matches_to_apply) # should now be 129 (127 clean matches + 2 manual)
+# or with a 30 day window, 115 (113 clean matches + 2 manual)
+
+# survey variables (minus recnr from above)
+v_sur <- c("serial", "sample", "sample2",  "cid_m", 
+           "uid_c_sur",
+           "int_date", "str_tim", "end_tim", "x0", "x0_1", "x0_2",
+           "x0_3", "x1", "ifr", 
+           "a1","HH_size","asset_score" ,"asset_quintile" ,
+           "c215", "c216", "c218", "c217", "c219", "c220", "c221", "c221_a",
+           "c221_aa", "c221_aaa", "c223", "c224", "c225", "c226", "c228", "c228_aa",
+           "c228_bb", "c228_ccc", "c228_cc", "c228_d", "c228_B", "b110_a", "b110_b", "b111",
+           "b111_a", "b112", "b112_a", "self_hscore", "b113", "b113_a", "b113_b", "b114",
+           "b115", "b117", "b119", "b120", "b121", "b122", "b123", "b130",
+           "c244", "c244_a", "c244_a1", "c244_a_1", "c244_a2", "c244_a_2", "c244_a3", "c244_a_3",
+           "c244_a4", "c244_a_4", "c244_a5", "c244_a_5", "d1", "d2", "d3", "d4",
+           "d5", "d6", "d7", "d8", "d9", "d10", "d10_a", "d10_a1",
+           "d10_a2", "d10_a3", "d10_a4", "d10_a5", "d10_a6", "d10_a_1", "d10_a_2", "d11",
+           "d11_a", "d12", "d12_a", "d12_a1", "d12_a2", "d12_a3", "d12_a4", "d12_a_1",
+           "d13", "d13_a", "d14", "parity_n_sur")
+
+# select survey data for new matches
+survey_data <- dat %>%
+  filter(recnr %in% matches_to_apply$recnr_2) %>%
+  select(recnr, all_of(v_sur)) %>%
+  rename(recnr_2 = recnr) %>%
+  left_join(matches_to_apply, by = "recnr_2")
+
+# # check before applying
+# survey_data %>%
+#   select(rid_m, recnr_1, recnr_2, all_of(v_sur))
+
+# updated rows for new matches
+dat_updated <- dat %>%
+  filter(recnr %in% matches_to_apply$recnr_1) %>%
+  select(-all_of(v_sur)) %>%
+  left_join(survey_data %>% select(-rid_m, -recnr_2), by = c("recnr" = "recnr_1")) %>%
+  mutate(match_n = "Partially:new",
+         match_n2 = "In both - new match",
+         match_score = 1)
+nrow(dat_updated) # 129
+
+dat_other <- dat %>%
+  filter(!(recnr %in% c(matches_to_apply$recnr_1, matches_to_apply$recnr_2)))
+
+datnew <- bind_rows(dat_other, dat_updated)
+
+nrow(dat) - nrow(datnew) == nrow(matches_to_apply) # TRUE
+
+datnew <- datnew[order(datnew$rid_m, datnew$c220), ]
 datnew$recnr <- NULL
 dat <- datnew
 
@@ -649,9 +807,11 @@ dat <- dat %>%
 
 # Create new match variable -----------------------------------------------
 
+table(dat$match_n2)
+
 dat <- dat %>%
   mutate(match_score = case_when(
-    match_n2 == "In both" ~ 1,
+    match_n2 %in% c("In both", "In both - new match") ~ 1,
     TRUE ~ NA
   ))
 
@@ -770,7 +930,7 @@ dat <- dat[order(dat$rid_m, dat$c220), ]
 
 # check to see have all desired variables from both survey and hdss
 dat %>%
-  select(match_n,
+  select(match_n, match_score,
          rid_m, serial1, x1, # mother id for both survey and dss, date of interview
          mstrata_a, mstrata_ac, mstrata_c, # mother-level strata drawn from dss for sampling, but only available in survey file?
          rid_c, pregout_dss, cstatus_dss, cstatus_agesp_dss, dob_c_dss, dod_c_dss, cod_c_dss, # child-level information from dss

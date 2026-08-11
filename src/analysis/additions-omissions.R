@@ -12,6 +12,7 @@ library(officer)
 library(ggplot2)
 library(flextable)
 library(ggh4x)
+library(patchwork)
 #' Inputs
 overall <- readRDS("./gen/augment/overallName-recode.rds")
 ################################################################################
@@ -506,10 +507,12 @@ ggsave("./gen/figures/fig-matching.png", myplot, width = 8, height = 5, dpi = 50
 
 # Figure with all horizontal text -----------------------------------------
 
+library(viridisLite)
+plasma(n = 3, begin = 0.1, end = 0.8, direction = -1)
 p1 <- allfigdat %>%
   filter(subsample == "All-women") %>%
   mutate(event = factor(event, levels = c("Child died", "Child surviving", "Live births"))) %>%
-  mutate(type = factor(type, levels = c("Addition", "Omission", "Match"))) %>%
+  mutate(type = factor(type, levels = c("Omission", "Match"))) %>%
   mutate(label = ifelse(name == "N", value, round(value, 0))) %>%
   ggplot() +
   geom_bar(aes(x = event, y = value, fill = type), stat = "identity", position = "stack") +
@@ -530,12 +533,13 @@ p1 <- allfigdat %>%
   facet_wrap(~name, scales = "free_x", switch = "x") +
   labs(x = "", y = "", subtitle = "All-women") +
   facetted_pos_scales(
-    y = list(
-      name == "N" ~ scale_y_continuous(expand = expansion(mult = c(0, 0.1))),
-      name != "N" ~ scale_y_continuous(expand = expansion(mult = c(0, 0)))
-    )
+   y = list(
+     name == "N" ~ scale_y_continuous(expand = expansion(mult = c(0, 0.1))),
+     name != "N" ~ scale_y_continuous(expand = expansion(mult = c(0, 0)))
+   )
   ) +
-  scale_fill_viridis_d(option = "plasma", direction = -1, begin = 0.1, end = 0.8, name = "") +
+  scale_fill_manual(values = c("#BF3984FF", "#42049EFF")) +
+  #scale_fill_viridis_d(option = "plasma", direction = -1, begin = 0.1, end = 0.8, name = "") +
   theme_minimal() +
   theme(
     strip.placement = "outside",
@@ -550,6 +554,7 @@ p1 <- allfigdat %>%
     legend.text = element_text(color = "black"),
     legend.title = element_text(color = "black")
   )
+p1
 p2 <- allfigdat %>%
   filter(subsample == "Lifelong-residents") %>%
   mutate(event = factor(event, levels = c("Child died", "Child surviving", "Live births"))) %>%
@@ -594,7 +599,7 @@ p2 <- allfigdat %>%
     legend.text = element_text(color = "black"),
     legend.title = element_text(color = "black")
   )
-
+p2
 p3 <- allfigdat %>%
   filter(subsample == "Recent-births") %>%
   mutate(event = factor(event, levels = c("Child died", "Child surviving", "Live births"))) %>%
@@ -624,7 +629,8 @@ p3 <- allfigdat %>%
       name != "N" ~ scale_y_continuous(expand = expansion(mult = c(0, 0)))
     )
   ) +
-  scale_fill_viridis_d(option = "plasma", direction = -1, begin = 0.1, end = 0.8, name = "") +
+  scale_fill_viridis_d(option = "plasma", direction = -1, begin = 0.1, end = 0.8, name = "",
+                       guide = guide_legend(reverse = TRUE)) +
   theme_minimal() +
   theme(
     strip.placement = "outside",
@@ -638,6 +644,7 @@ p3 <- allfigdat %>%
     legend.text = element_text(color = "black"),
     legend.title = element_text(color = "black")
   )
+
 
 combined_plot <- p1 / p2 / p3
 ggsave(

@@ -1,5 +1,5 @@
 ################################################################################
-#' @description Recode and categorize variables
+#' @description Recode and categorize variables for use in descriptive tables and regression
 #' @return 
 ################################################################################
 #' Clear environment
@@ -164,7 +164,6 @@ dat <- dat %>%
 
 
 # Interview-level characteristics -----------------------------------------
-
 
 # presence of others during section c
 table(dat$c244, useNA = "always")
@@ -602,14 +601,14 @@ dat <- dat %>%
 
 # Check id vars -----------------------------------------------------------
 
-nrow(dat) # 3185
+nrow(dat) # 3056
 
 # mother_id
 length(unique(dat$rid_m)) # 848
 nrow(subset(dat, is.na(rid_m))) # 0
 
 # child id in dss
-length(unique(dat$rid_c)) # 2163
+length(unique(dat$rid_c)) # 2160
 
 # count from 1 to n in survey
 length(unique(dat$serial)) # 2649
