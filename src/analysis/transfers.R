@@ -33,7 +33,6 @@ datSamp <- subset(datSamp, !((cstatus_dss == "Died" & cstatus_sur != "Died") |
                     (cstatus_dss != "Died" & cstatus_sur == "Died")))
 nrow(datSamp) # 1966
 
-
 # Age agreement -----------------------------------------------------------
 
 # Deaths reported as younger/older in FPH (DSS is reference)
@@ -45,15 +44,15 @@ agree_age <- dat %>%
       cstatus_agesp_sur == "Neonatal" ~ "youngerfph",
     cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "Postneonatal" &
       cstatus_agesp_sur != "Neonatal" ~ "olderfph",
-    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "1-4" &
+    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "1-4 years" &
       cstatus_agesp_sur %in% c("Neonatal","Postneonatal") ~ "youngerfph",
-    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "1-4" &
+    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "1-4 years" &
       !(cstatus_agesp_sur %in% c("Neonatal","Postneonatal"))  ~ "olderfph",
-    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "5-9" &
-      cstatus_agesp_sur %in% c("Neonatal","Postneonatal", "1-4") ~ "youngerfph",
-    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "5-9" &
-      !(cstatus_agesp_sur %in% c("Neonatal","Postneonatal", "1-4"))  ~ "olderfph",
-    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "10+" ~ "youngerfph",
+    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "5-9 years" &
+      cstatus_agesp_sur %in% c("Neonatal","Postneonatal", "1-4 years") ~ "youngerfph",
+    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "5-9 years" &
+      !(cstatus_agesp_sur %in% c("Neonatal","Postneonatal", "1-4 years"))  ~ "olderfph",
+    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "10+ years" ~ "youngerfph",
     TRUE ~ NA
   )) %>%
   group_by(cstatus_agesp_dss, classified) %>%
@@ -75,7 +74,7 @@ tab_agreeage <- agree_age %>%
   bind_rows(agetotal) %>%
   select(cstatus_agesp_dss, total, n_correct, per_correct, n_olderfph, per_olderfph, n_youngerfph, per_youngerfph) %>%
   mutate(cstatus_agesp_dss = factor(cstatus_agesp_dss, 
-                                    levels = c("Neonatal", "Postneonatal", "1-4", "5-9", "10+","Total"))) %>%
+                                    levels = c("Neonatal", "Postneonatal", "1-4 years", "5-9 years", "10+ years","Total"))) %>%
   arrange(cstatus_agesp_dss)
 
 tab_agreeage$n_olderfph[is.na(tab_agreeage$n_olderfph)] <- 0
@@ -85,59 +84,7 @@ tab_agreeage$per_youngerfph[is.na(tab_agreeage$per_youngerfph) & tab_agreeage$cs
 tab_agreeage$n_youngerfph[is.na(tab_agreeage$n_youngerfph)] <- 0
 tab_agreeage$per_youngerfph[is.na(tab_agreeage$per_youngerfph)] <- "0.00"
 
-tab_agreeage
-
-# Age transferred in/out ----------------------------------------------------------
-
-# Deaths transferring out of each age group (DSS is reference)
-transfers_out <- dat %>%
-  mutate(classified = case_when(
-    cstatus_agesp_dss == cstatus_agesp_sur ~ "correct",
-    TRUE ~ "transfer_out"
-  )) %>%
-  group_by(cstatus_agesp_dss) %>%
-  summarise(
-    n_total    = n(),
-    n_correct  = sum(cstatus_agesp_dss == cstatus_agesp_sur),
-    n_out      = sum(cstatus_agesp_dss != cstatus_agesp_sur),
-    .groups = "drop"
-  )
-
-# Deaths transferring into each age group from FPH (DSS is reference)
-transfers_in <- dat %>%
-  filter(cstatus_agesp_dss != cstatus_agesp_sur) %>%
-  group_by(cstatus_agesp_sur) %>%
-  summarise(n_in = n(), .groups = "drop") %>%
-  rename(cstatus_agesp_dss = cstatus_agesp_sur)
-
-# combine
-tab_transage <- transfers_out %>%
-  left_join(transfers_in, by = "cstatus_agesp_dss") %>%
-  replace_na(list(n_in = 0)) %>% 
-  #filter(cstatus_agesp_dss != "10+") %>%
-  bind_rows( # add total
-    summarise(.,
-              cstatus_agesp_dss = "Total",
-              n_total   = sum(n_total, na.rm = TRUE),
-              n_correct = sum(n_correct, na.rm = TRUE),
-              n_out     = sum(n_out, na.rm = TRUE),
-              n_in      = sum(n_in, na.rm = TRUE)
-    )
-  ) %>%
-  mutate( # expressing as % of DSS total for comparability
-    per_correct = n_correct/n_total*100,
-    per_out     = n_out/n_total*100,
-    per_in      = n_in/n_total*100 
-  ) %>%
-  mutate(cstatus_agesp_dss = factor(cstatus_agesp_dss, 
-                                    levels = c("Neonatal", "Postneonatal", "1-4", "5-9", "10+","Total"))) %>%
-  arrange(cstatus_agesp_dss) %>%
-  mutate(per_correct = sprintf("%.2f", round(per_correct, 2)),
-         per_out = sprintf("%.2f", round(per_out, 2)),
-         per_in = sprintf("%.2f", round(per_in, 2))) %>%
-  select(cstatus_agesp_dss, n_total, n_correct, per_correct, n_out, per_out, n_in, per_in)
-
-# Age/cause FPH agreement -----------------------------------------------------
+# Age/cause agreement -----------------------------------------------------
 
 agree_agecause <- dat %>%
   mutate(classified = case_when(
@@ -147,19 +94,20 @@ agree_agecause <- dat %>%
       cstatus_agesp_sur == "Neonatal" ~ "youngerfph",
     cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "Postneonatal" &
       cstatus_agesp_sur != "Neonatal" ~ "olderfph",
-    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "1-4" &
+    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "1-4 years" &
       cstatus_agesp_sur %in% c("Neonatal","Postneonatal") ~ "youngerfph",
-    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "1-4" &
+    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "1-4 years" &
       !(cstatus_agesp_sur %in% c("Neonatal","Postneonatal"))  ~ "olderfph",
-    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "5-9" &
-      cstatus_agesp_sur %in% c("Neonatal","Postneonatal", "1-4") ~ "youngerfph",
-    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "5-9" &
-      !(cstatus_agesp_sur %in% c("Neonatal","Postneonatal", "1-4"))  ~ "olderfph",
-    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "10+" ~ "youngerfph",
+    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "5-9 years" &
+      cstatus_agesp_sur %in% c("Neonatal","Postneonatal", "1-4 years") ~ "youngerfph",
+    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "5-9 years" &
+      !(cstatus_agesp_sur %in% c("Neonatal","Postneonatal", "1-4 years"))  ~ "olderfph",
+    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "10+ years" ~ "youngerfph",
     TRUE ~ NA
   )) %>%
   group_by(cstatus_agesp_dss, cstrata_c, classified) %>%
   summarise(n = n())
+
 tab_agreeagecause <- agree_agecause %>%
   group_by(cstatus_agesp_dss, cstrata_c) %>%
   mutate(total = sum(n)) %>%
@@ -167,7 +115,7 @@ tab_agreeagecause <- agree_agecause %>%
   pivot_wider(id_cols = c(cstatus_agesp_dss, cstrata_c, total), names_from = classified, values_from = c(n, per)) %>%
   select(cstatus_agesp_dss, cstrata_c, total, n_correct, per_correct, n_olderfph, per_olderfph, n_youngerfph, per_youngerfph) %>%
   mutate(cstatus_agesp_dss = factor(cstatus_agesp_dss, 
-                                    levels = c("Neonatal", "Postneonatal", "1-4", "5-9", "10+"))) %>%
+                                    levels = c("Neonatal", "Postneonatal", "1-4 years", "5-9 years", "10+ years"))) %>%
   arrange(cstatus_agesp_dss) %>%
   filter(!(cstatus_agesp_dss %in% c("5-9", "10+")))
 
@@ -178,8 +126,12 @@ tab_agreeagecause$per_youngerfph[is.na(tab_agreeagecause$per_youngerfph) & tab_a
 tab_agreeagecause$n_youngerfph[is.na(tab_agreeagecause$n_youngerfph)] <- 0
 tab_agreeagecause$per_youngerfph[is.na(tab_agreeagecause$per_youngerfph)] <- "0.00"
 
-# merge on causes and transfers in
-TabAgetrans <- tab_agreeage %>%
+tab_agreeage
+tab_agreeagecause
+
+# Combine age and age/cause agreement -----------------------------------------------
+
+tab_agree_ac <- tab_agreeage %>%
   mutate(cstrata_c = "All causes") %>%
   bind_rows(tab_agreeagecause) %>%
   mutate(cod_rank = case_when(
@@ -187,17 +139,69 @@ TabAgetrans <- tab_agreeage %>%
     cstrata_c == "All causes" ~ 3,
     TRUE ~ 1
   )) %>%
-  arrange(cstatus_agesp_dss, cod_rank)  %>%
-  left_join(
-    tab_transage %>% select(cstatus_agesp_dss, n_in),
-    by = "cstatus_agesp_dss"
-  ) %>%
-  select(cstatus_agesp_dss, cstrata_c, total, n_correct, per_correct, n_olderfph, per_olderfph, 
-         n_youngerfph, per_youngerfph, n_in)
+  arrange(cstatus_agesp_dss, cod_rank) %>%
+  select(cstatus_agesp_dss, cstrata_c, total, n_correct, per_correct, 
+         n_olderfph, per_olderfph, 
+         n_youngerfph, per_youngerfph)
 
-# Table 3: age transfers ----------------------------------------------------
 
-ft <- flextable(TabAgetrans) %>%
+# Total transferred into age group ----------------------------------------
+
+# Deaths transferring into each age group from FPH (DSS is reference)
+transfers_in <- dat %>%
+  filter(cstatus_agesp_dss != cstatus_agesp_sur) %>%
+  group_by(cstatus_agesp_sur) %>%
+  summarise(n_in = n(), .groups = "drop") %>%
+  rename(cstatus_agesp_dss = cstatus_agesp_sur) %>%
+  bind_rows(
+    summarise(.,
+              cstatus_agesp_dss = "Total",
+              n_in      = sum(n_in, na.rm = TRUE)
+    )
+  ) 
+
+tab_agreeTrans_ac  <- tab_agree_ac %>%
+  left_join(transfers_in, by = "cstatus_agesp_dss")
+
+# Table 4: Age/cause transfers ---------------------------------------
+
+# Format for flextable
+table_with_headers <- tab_agreeTrans_ac %>%
+  ungroup() %>%
+  mutate(across(everything(), as.character)) %>%
+  group_split(cstatus_agesp_dss, .keep = TRUE) %>%
+  map_dfr(function(df) {
+    header_row <- tibble(
+      cstatus_agesp_dss = unique(df$cstatus_agesp_dss),
+      cstrata_c = "",
+      total = "",
+      n_correct = "", 
+      per_correct = "", 
+      n_olderfph = "",
+      per_olderfph = "", 
+      n_youngerfph = "", 
+      per_youngerfph = "", 
+      n_in = ""
+    )
+    bind_rows(header_row, df)
+  }) %>%
+  mutate(recnr = 1:n()) %>%
+  mutate( cstatus_agesp_dss = factor(cstatus_agesp_dss, 
+                                     levels = c("Neonatal", "Postneonatal", "1-4 years", "5-9 years", "10+ years", "Total"))) %>%
+  arrange(cstatus_agesp_dss, recnr) %>%
+  select(-recnr)
+
+table_with_headers$cstatus_agesp_dss <- as.character(table_with_headers$cstatus_agesp_dss)
+
+table_with_headers <- table_with_headers %>%
+  filter(!(cstatus_agesp_dss == "5-9 years" & cstrata_c == "")) %>%
+  filter(!(cstatus_agesp_dss == "10+ years" & cstrata_c == "")) %>%
+  filter(!(cstatus_agesp_dss == "Total" & cstrata_c == ""))
+table_with_headers$cstatus_agesp_dss[!(table_with_headers$cstatus_agesp_dss %in% c("5-9 years", "10+ years", "Total")) &
+                                       table_with_headers$cstrata_c != ""] <- ""
+
+
+ft <- flextable(table_with_headers) %>%
   merge_v(j = ~ cstatus_agesp_dss + n_in) %>%
   set_header_labels(values = c("Age group of death", "COD", 
                                "N HDSS", "N", "%","N", "%", "N", "%", "N")) %>%
@@ -207,7 +211,7 @@ ft <- flextable(TabAgetrans) %>%
   flextable::fontsize(size = 9, part = "all") %>%
   flextable::font(fontname = "Times New Roman", part = "all") %>%
   autofit() %>%
-  align(align = "right", j = 2:ncol(TabAgetrans), part = "all") %>%
+  align(align = "right", j = 2:ncol(table_with_headers), part = "all") %>%
   align(align = "left", j = 1, part = "all")
 ft
 
@@ -218,6 +222,7 @@ doc <- read_docx() %>%
 output_path <- here::here("gen/tables", "table-age-transfers-cod.docx")
 print(doc, target = output_path)
 cat("Saved to:", output_path, "\n")
+
 
 # Test associations between age, cause --------------------------
 
@@ -303,7 +308,7 @@ dat %>%
   ungroup()
 
 
-# Table S1: associations age/cause ----------------------------------------
+# Table A1: Age/cause transfer associations ----------------------------------------
 
 countsAgeCause <- dat %>%
   mutate(classified = case_when(
@@ -313,15 +318,15 @@ countsAgeCause <- dat %>%
       cstatus_agesp_sur == "Neonatal" ~ "youngerfph",
     cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "Postneonatal" &
       cstatus_agesp_sur != "Neonatal" ~ "olderfph",
-    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "1-4" &
+    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "1-4 years" &
       cstatus_agesp_sur %in% c("Neonatal","Postneonatal") ~ "youngerfph",
-    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "1-4" &
+    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "1-4 years" &
       !(cstatus_agesp_sur %in% c("Neonatal","Postneonatal"))  ~ "olderfph",
-    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "5-9" &
-      cstatus_agesp_sur %in% c("Neonatal","Postneonatal", "1-4") ~ "youngerfph",
-    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "5-9" &
-      !(cstatus_agesp_sur %in% c("Neonatal","Postneonatal", "1-4"))  ~ "olderfph",
-    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "10+" ~ "youngerfph",
+    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "5-9 years" &
+      cstatus_agesp_sur %in% c("Neonatal","Postneonatal", "1-4 years") ~ "youngerfph",
+    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "5-9 years" &
+      !(cstatus_agesp_sur %in% c("Neonatal","Postneonatal", "1-4 years"))  ~ "olderfph",
+    cstatus_agesp_dss != cstatus_agesp_sur & cstatus_agesp_dss == "10+ years" ~ "youngerfph",
     TRUE ~ NA
   )) %>%
   group_by(cstatus_agesp_dss) %>%
@@ -330,7 +335,7 @@ countsAgeCause <- dat %>%
 # testing Chi
 countsAgeCause %>%
   ungroup() %>%
-  filter(cstatus_agesp_dss == "1-4") %>%
+  filter(cstatus_agesp_dss == "1-4 years") %>%
   pivot_wider(names_from = classified, values_from = n, values_fill = 0) %>%
   select(-c(cstrata_c, cstatus_agesp_dss)) %>%
   as.matrix() %>%
@@ -356,7 +361,7 @@ TabChiAgeCause <- countsAgeCause %>%
                              labels = c("Agreement", "Older in FPH", "Younger in FPH"))) %>%
   pivot_wider(names_from = classified, values_from = n, values_fill = 0) %>%
   left_join(chiAgeCause, by = "cstatus_agesp_dss") %>%
-  mutate(cstatus_agesp_dss = factor( cstatus_agesp_dss, levels = c("Neonatal", "Postneonatal", "1-4"))) %>%
+  mutate(cstatus_agesp_dss = factor( cstatus_agesp_dss, levels = c("Neonatal", "Postneonatal", "1-4 years"))) %>%
   mutate(cod_rank = case_when(
     cstrata_c == "Other" ~ 2,
     TRUE ~ 1
@@ -365,8 +370,34 @@ TabChiAgeCause <- countsAgeCause %>%
   select(-c(cod_rank))
 
 
-ft <- flextable(TabChiAgeCause) %>%
-  merge_v(j = ~ cstatus_agesp_dss + pvalcat) %>%
+table_with_headers <- TabChiAgeCause %>%
+  ungroup() %>%
+  mutate(across(everything(), as.character)) %>%
+  group_split(cstatus_agesp_dss, .keep = TRUE) %>%
+  map_dfr(function(df) {
+    header_row <- tibble(
+      cstatus_agesp_dss = unique(df$cstatus_agesp_dss),
+      cstrata_c = "",
+      Agreement = "",
+      `Older in FPH` = "", 
+      `Younger in FPH` = "", 
+      pvalcat  = ""
+    )
+    bind_rows(header_row, df)
+  }) %>%
+  mutate(recnr = 1:n()) %>%
+  mutate(cstatus_agesp_dss = factor(cstatus_agesp_dss, 
+                                     levels = c("Neonatal", "Postneonatal", "1-4 years", "5-9 years"))) %>%
+  arrange(cstatus_agesp_dss, recnr) %>%
+  select(-recnr)
+
+
+table_with_headers$cstatus_agesp_dss <- as.character(table_with_headers$cstatus_agesp_dss)
+
+table_with_headers$cstatus_agesp_dss[table_with_headers$cstrata_c != ""] <- ""
+
+ft <- flextable(table_with_headers) %>%
+  merge_v(j = ~ pvalcat) %>%
   set_header_labels(values = c("Age group of death", "COD", 
                                "Agreement", "Older in FPH", "Younger in FPH", "p-value")) %>%
   set_caption(caption = "Age-at-death errors by cause of death. Table displays counts of deaths in the HDSS that were correctly classified as the same age group in the FPH, or reported as occurring in an older or younger age group, alongside p-values from Chi-squared tests for significance.") %>%
@@ -386,8 +417,7 @@ output_path <- here::here("gen/tables", "table-age-transfers-cod-chi.docx")
 print(doc, target = output_path)
 cat("Saved to:", output_path, "\n")
 
-
-# Period of death agreement -----------------------------------------------------------
+# Period agreement --------------------------------------------------------
 
 # Deaths reported as younger/older in FPH (DSS is reference)
 agree_period <- dat %>%
@@ -427,7 +457,7 @@ tab_agreeperiod <- agree_period %>%
   select(deathrecency_cat_dss, total, n_correct, per_correct, n_distantfph, per_distantfph,
          n_recentfph, per_recentfph) %>%
   mutate(deathrecency_cat_dss = factor(deathrecency_cat_dss, 
-                                    levels = c("0-4", "5-9", "10-14", "15+","Total"))) %>%
+                                       levels = c("0-4", "5-9", "10-14", "15+","Total"))) %>%
   arrange(deathrecency_cat_dss)
 
 tab_agreeperiod$n_distantfph[is.na(tab_agreeperiod$n_distantfph)] <- 0
@@ -437,58 +467,7 @@ tab_agreeperiod$per_recentfph[is.na(tab_agreeperiod$per_recentfph) & tab_agreepe
 tab_agreeperiod$n_recentfph[is.na(tab_agreeperiod$n_recentfph)] <- 0
 tab_agreeperiod$per_recentfph[is.na(tab_agreeperiod$per_recentfph)] <- "0.00"
 
-# Deaths transferring out of each period (DSS is reference)
-transfers_out <- dat %>%
-  filter(cstatus_agesp_dss == cstatus_agesp_sur) %>%  # same age at death group
-  group_by(deathrecency_cat_dss) %>%
-  summarise(
-    n_total   = n(),
-    n_correct = sum(deathrecency_cat_dss == deathrecency_cat_sur),
-    n_out     = sum(deathrecency_cat_dss != deathrecency_cat_sur),
-    .groups = "drop"
-  )
-
-transfers_in <- dat %>%
-  filter(cstatus_agesp_dss == cstatus_agesp_sur,
-         deathrecency_cat_dss != deathrecency_cat_sur) %>%
-  group_by(deathrecency_cat_sur) %>%
-  summarise(n_in = n(), .groups = "drop") %>%
-  rename(deathrecency_cat_dss = deathrecency_cat_sur)
-
-# combine
-tab_transperiod <- transfers_out %>%
-  left_join(transfers_in, by = "deathrecency_cat_dss") %>%
-  replace_na(list(n_in = 0)) %>% 
-  #filter(cstatus_agesp_dss != "10+") %>%
-  bind_rows( # add total
-    summarise(.,
-              deathrecency_cat_dss = "Total",
-              n_total   = sum(n_total, na.rm = TRUE),
-              n_correct = sum(n_correct, na.rm = TRUE),
-              n_out     = sum(n_out, na.rm = TRUE),
-              n_in      = sum(n_in, na.rm = TRUE)
-    )
-  ) %>%
-  mutate( # expressing as % of DSS total for comparability
-    per_correct = n_correct/n_total*100,
-    per_out     = n_out/n_total*100,
-    per_in      = n_in/n_total*100 
-  ) %>%
-  mutate(deathrecency_cat_dss = factor(deathrecency_cat_dss, 
-                                       levels = c("0-4", "5-9", "10-14", "15+", "Total"))) %>%
-  arrange(deathrecency_cat_dss) %>%
-  mutate(per_correct = sprintf("%.2f", round(per_correct, 2)),
-         per_out = sprintf("%.2f", round(per_out, 2)),
-         per_in = sprintf("%.2f", round(per_in, 2))) %>%
-  select(deathrecency_cat_dss, n_total, n_correct, per_correct, n_out, per_out, n_in, per_in) 
-
-
-TabPeriodtrans <- tab_agreeperiod %>%
-  left_join(tab_transperiod %>% select(deathrecency_cat_dss, n_in))
-
-TabPeriodtrans
-
-# Period/age of death agreement -----------------------------------------------------------
+# Period/age agreement ----------------------------------------------------
 
 # Deaths reported as younger/older in FPH (DSS is reference)
 agree_periodage <- dat %>%
@@ -523,91 +502,47 @@ tab_agreeperiodage$per_recentfph[is.na(tab_agreeperiodage$per_recentfph) & tab_a
 tab_agreeperiodage$n_recentfph[is.na(tab_agreeperiodage$n_recentfph)] <- 0
 tab_agreeperiodage$per_recentfph[is.na(tab_agreeperiodage$per_recentfph)] <- "0.00"
 
-# transfers in
-tab_transperiodage <- dat %>%
-  filter(cstatus_agesp_dss == cstatus_agesp_sur,
-         deathrecency_cat_dss != deathrecency_cat_sur) %>%
-  group_by(deathrecency_cat_sur, cstatus_agesp_dss) %>%
-  summarise(n_in = n(), .groups = "drop") %>%
-  rename(deathrecency_cat_dss = deathrecency_cat_sur)
-tab_transperiodage <- tab_transperiodage %>%
-  bind_rows(transfers_in %>% mutate(cstatus_agesp_dss = "All"))
+tab_agreeperiod
+tab_agreeperiodage
 
-# add totals
-TabPeriodAgetrans <- tab_agreeperiodage %>%
-  bind_rows(tab_agreeperiod) %>%
-  mutate(cstatus_agesp_dss = ifelse(is.na(cstatus_agesp_dss), "All", cstatus_agesp_dss)) %>%
-  left_join(tab_transperiodage) %>%
+# Combine period and period/age -------------------------------------------
+
+tab_agree_pa <- tab_agreeperiod %>%
+  mutate(cstatus_agesp_dss = "All") %>%
+  bind_rows(tab_agreeperiodage) %>%
   mutate(deathrecency_cat_dss = factor(deathrecency_cat_dss, 
                                        levels = c("0-4", "5-9", "10-14", "15+","Total"))) %>%
   mutate(cstatus_agesp_dss = factor(cstatus_agesp_dss,
-                                    levels = c("Neonatal","Postneonatal", "1-4", "5-9", "10+", "All"))) %>%
+                                    levels = c("Neonatal","Postneonatal", "1-4 years", "5-9 years", "10+ years", "All"))) %>%
   arrange(deathrecency_cat_dss, cstatus_agesp_dss)
 
-TabPeriodAgetrans[is.na(TabPeriodAgetrans)] <- 0
-TabPeriodAgetrans
 
-# Period/age/cause FPH agreement ----------------------------------------------
+# Total transferred into period -------------------------------------------
 
-agree_periodagecause <- dat %>%
-  filter(cstatus_agesp_dss == cstatus_agesp_sur) %>%  # same age at death group
-  mutate(classified = case_when(
-    deathrecency_cat_dss == deathrecency_cat_sur ~ "correct",
-    deathrecency_cat_dss != deathrecency_cat_sur & deathrecency_cat_dss == "0-4" ~ "distantfph",
-    deathrecency_cat_dss != deathrecency_cat_sur & deathrecency_cat_dss == "5-9" &
-      deathrecency_cat_sur == "0-4" ~ "recentfph",
-    deathrecency_cat_dss != deathrecency_cat_sur & deathrecency_cat_dss == "5-9" &
-      deathrecency_cat_sur != "0-4" ~ "distantfph",
-    deathrecency_cat_dss != deathrecency_cat_sur & deathrecency_cat_dss == "10-14" &
-      deathrecency_cat_sur %in% c("0-4", "5-9") ~ "recentfph",
-    deathrecency_cat_dss != deathrecency_cat_sur & deathrecency_cat_dss == "10-14" &
-      !(deathrecency_cat_sur %in% c("0-4", "5-9")) ~ "distantfph",
-    deathrecency_cat_dss != deathrecency_cat_sur & deathrecency_cat_dss == "15+" &
-      deathrecency_cat_sur %in% c("0-4", "5-9", "10-14") ~ "recentfph",
-    TRUE ~ NA
-  )) %>%
-  group_by(deathrecency_cat_dss, cstatus_agesp_dss, cstrata_c, classified) %>%
-  summarise(n = n())
-# totals
-tab_agreeperiodagecause <- agree_periodagecause %>%
-  group_by(deathrecency_cat_dss, cstatus_agesp_dss, cstrata_c) %>%
-  mutate(total = sum(n)) %>%
-  mutate(per = round(n/total*100,2)) %>%
-  pivot_wider(id_cols = c(deathrecency_cat_dss, cstatus_agesp_dss, cstrata_c, total), names_from = classified, values_from = c(n, per))
-tab_agreeperiodagecause$n_distantfph[is.na(tab_agreeperiodagecause$n_distantfph)] <- 0
-tab_agreeperiodagecause$per_distantfph[is.na(tab_agreeperiodagecause$per_distantfph)] <- "0.00"
-tab_agreeperiodagecause$n_recentfph[is.na(tab_agreeperiodagecause$n_recentfph) & tab_agreeperiodagecause$deathrecency_cat_dss == "0-4"] <- "-"
-tab_agreeperiodagecause$per_recentfph[is.na(tab_agreeperiodagecause$per_recentfph) & tab_agreeperiodagecause$deathrecency_cat_dss == "0-4"] <- "-"
-tab_agreeperiodagecause$n_recentfph[is.na(tab_agreeperiodagecause$n_recentfph)] <- 0
-tab_agreeperiodagecause$per_recentfph[is.na(tab_agreeperiodagecause$per_recentfph)] <- "0.00"
+transfers_in <- dat %>%
+  filter(cstatus_agesp_dss == cstatus_agesp_sur,
+         deathrecency_cat_dss != deathrecency_cat_sur) %>%
+  group_by(deathrecency_cat_sur) %>%
+  summarise(n_in = n(), .groups = "drop") %>%
+  rename(deathrecency_cat_dss = deathrecency_cat_sur) %>%
+  bind_rows(
+    summarise(.,
+              deathrecency_cat_dss = "Total",
+              n_in      = sum(n_in, na.rm = TRUE)
+    )
+  ) 
 
-# add totals
-TabPeriodAgeCausetrans <- tab_agreeperiodagecause %>%
-  bind_rows(tab_agreeperiodage %>% mutate(n_recentfph = as.character(n_recentfph),
-                                          per_distantfph = as.character(per_distantfph),
-                                          per_recentfph = as.character(per_recentfph))) %>% 
-  mutate(cstrata_c = ifelse(is.na(cstrata_c), "All causes", cstrata_c)) %>%
-  mutate(deathrecency_cat_dss = factor(deathrecency_cat_dss, 
-                                       levels = c("0-4", "5-9", "10-14", "15+","Total"))) %>%
-  mutate(cstatus_agesp_dss = factor(cstatus_agesp_dss,
-                                    levels = c("Neonatal","Postneonatal", "1-4", "5-9", "10+", "All"))) %>%
-    mutate(cod_rank = case_when(
-      cstrata_c == "Birth asphyxia" ~ 1,
-      cstrata_c == "RI and congenital" ~ 2,
-      cstrata_c == "Drowning" ~ 3,
-      cstrata_c == "Other" ~ 4,
-      cstrata_c == "5-9 year" ~ 5,
-      cstrata_c == "10+" ~ 6,
-      cstrata_c == "All causes" ~ 7,
-      TRUE ~ NA
-    )) %>%
-  arrange(deathrecency_cat_dss, cstatus_agesp_dss, cod_rank)
+tab_agreeTrans_pa <- tab_agree_pa %>%
+  left_join(transfers_in, by = "deathrecency_cat_dss")
 
-# Table 4: period transfers ----------------------------------------------------
+# Table 5: period transfers ----------------------------------------------------
 
-# simple table
-
-ft <- flextable(TabPeriodtrans) %>%
+ft <- tab_agreeTrans_pa %>%
+  filter(cstatus_agesp_dss == "All") %>%
+  select(deathrecency_cat_dss, total, n_correct, 
+         per_correct, n_distantfph, per_distantfph, 
+         n_recentfph, per_recentfph, n_in) %>%
+  flextable() %>%
   set_header_labels(values = c("Recall period of death (years prior to validation study)",  
                                "N HDSS", "N", "%","N", "%", "N", "%", "N")) %>%
   add_header_row(values = c(" ", "Agreement", "Displaced backwards in FPH", "Displaced forwards in FPH", "Displaced into period in FPH"), 
@@ -616,7 +551,7 @@ ft <- flextable(TabPeriodtrans) %>%
   flextable::fontsize(size = 9, part = "all") %>%
   flextable::font(fontname = "Times New Roman", part = "all") %>%
   autofit() %>%
-  align(align = "right", j = 2:ncol(TabPeriodtrans), part = "all") %>%
+  align(align = "right", j = 2:9, part = "all") %>%
   align(align = "left", j = 1, part = "all")
 ft
 
@@ -628,12 +563,7 @@ output_path <- here::here("gen/tables", "table-period-displacement.docx")
 print(doc, target = output_path)
 cat("Saved to:", output_path, "\n")
 
-
 # Test associations between recall period, age, cause --------------------------
-
-TabPeriodtrans
-TabPeriodAgetrans
-TabPeriodAgeCausetrans
 
 # ok maybe need to test association between recall period * age group
 # and recall period * age/cause
@@ -713,7 +643,7 @@ dat %>%
   select(-cstrata_c) %>%
   as.matrix() %>%
   chisq.test()
-  
+
 
 # recall period displacement by cause of death, stratified by period
 dat %>%
@@ -776,8 +706,7 @@ dat %>%
   ungroup()
 # no statistically significant difference in the pattern of recall period displacement (correct vs distantfph vs recentfph) across cause-of-death strata, within any age × recency group.
 
-
-# Table S2: associations period/age ----------------------------------------
+# Table A2: associations period/age ----------------------------------------
 
 countsPeriodAge <- dat %>%
   filter(cstatus_agesp_dss == cstatus_agesp_sur) %>%
@@ -828,7 +757,7 @@ TabChiPeriodAge <- countsPeriodAge %>%
                              labels = c("Agreement", "Displaced backwards in FPH", "Displaced forwards in FPH"))) %>%
   pivot_wider(names_from = classified, values_from = n, values_fill = 0) %>%
   mutate(cstatus_agesp_dss = factor(cstatus_agesp_dss, 
-                                    levels = c("Neonatal", "Postneonatal", "1-4", "5-9", "10+"),
+                                    levels = c("Neonatal", "Postneonatal", "1-4 years", "5-9 years", "10+ years"),
                                     labels = c("Neonatal", "Postneonatal", "1-4 years", "5-9 years", "10+ years"))) %>%
   mutate(deathrecency_cat_dss = factor(deathrecency_cat_dss, levels = c("0-4", "5-9", "10-14", "15+"))) %>%
   group_by(deathrecency_cat_dss) %>%
@@ -838,7 +767,38 @@ TabChiPeriodAge <- countsPeriodAge %>%
   arrange(deathrecency_cat_dss, cstatus_agesp_dss) 
 
 
-ft <- flextable(TabChiPeriodAge) %>%
+table_with_headers <- TabChiPeriodAge  %>%
+  ungroup() %>%
+  mutate(across(everything(), as.character)) %>%
+  group_split(deathrecency_cat_dss, .keep = TRUE) %>%
+  map_dfr(function(df) {
+    header_row <- tibble(
+      deathrecency_cat_dss = unique(df$deathrecency_cat_dss),
+      cstatus_agesp_dss = "",
+      Agreement = "",
+      `Displaced backwards in FPH` = "", 
+      `Displaced forwards in FPH` = "", 
+      pvalcat  = ""
+    )
+    bind_rows(header_row, df)
+  }) %>%
+  mutate(deathrecency_cat_dss = factor(deathrecency_cat_dss, 
+                                    levels = c("0-4",  "5-9", "10-14", "15+"))) %>%
+  mutate(cstatus_agesp_dss = factor(cstatus_agesp_dss, 
+                                    levels = c("","Neonatal", "Postneonatal", "1-4 years", "5-9 years", "10+ years"))) %>%
+  arrange(deathrecency_cat_dss, cstatus_agesp_dss) 
+
+# table_with_headers <- table_with_headers %>%
+#   filter(deathrecency_cat_dss != "15+") %>%
+#   filter(!(cstatus_agesp_dss %in% c( "5-9 years", "10+ years")))
+
+table_with_headers$deathrecency_cat_dss <- as.character(table_with_headers$deathrecency_cat_dss)
+
+table_with_headers$deathrecency_cat_dss[table_with_headers$cstatus_agesp_dss != ""] <- ""
+
+
+
+ft <- flextable(table_with_headers) %>%
   merge_v(j = ~ deathrecency_cat_dss + pvalcat) %>%
   set_header_labels(values = c("Recall period of death (years prior to validation study)",
                                "Age group of death", 
@@ -848,7 +808,7 @@ ft <- flextable(TabChiPeriodAge) %>%
   flextable::fontsize(size = 9, part = "all") %>%
   flextable::font(fontname = "Times New Roman", part = "all") %>%
   autofit() %>%
-  align(align = "right", j = 2:ncol(TabChiPeriodAge), part = "all") %>%
+  align(align = "right", j = 2:ncol(table_with_headers), part = "all") %>%
   align(align = "left", j = 1, part = "all")
 ft
 
@@ -861,7 +821,8 @@ output_path <- here::here("gen/tables", "table-period-displacement-ageChi.docx")
 print(doc, target = output_path)
 cat("Saved to:", output_path, "\n")
 
-# Table S3: associations period/age/cause ----------------------------------------
+
+# Table A3: associations period/age/cause ----------------------------------------
 
 countsPeriodAgeC <- dat %>%
   filter(cstatus_agesp_dss == cstatus_agesp_sur) %>%
@@ -880,7 +841,7 @@ countsPeriodAgeC <- dat %>%
       deathrecency_cat_sur %in% c("0-4", "5-9", "10-14") ~ "recentfph",
     TRUE ~ NA
   )) %>%
-  filter(cstatus_agesp_dss %in% c("Neonatal", "Postneonatal", "1-4")) %>%
+  filter(cstatus_agesp_dss %in% c("Neonatal", "Postneonatal", "1-4 years")) %>%
   filter(deathrecency_cat_dss != "15+") %>%
   group_by(deathrecency_cat_dss) %>%
   count(cstatus_agesp_dss, cstrata_c_binary, classified)
@@ -934,7 +895,7 @@ TabChiPeriodAgeC <- countsPeriodAgeC %>%
   filter(!is.na(classified)) %>%
   left_join(chiPeriodAgeC, by = c("deathrecency_cat_dss","cstatus_agesp_dss")) %>%
   mutate(cstatus_agesp_dss = factor(cstatus_agesp_dss, 
-                                    levels = c("Neonatal", "Postneonatal", "1-4", "5-9", "10+"),
+                                    levels = c("Neonatal", "Postneonatal", "1-4 years", "5-9 years", "10+ years"),
                                     labels = c("Neonatal", "Postneonatal", "1-4 years", "5-9 years", "10+ years"))) %>%
   mutate(deathrecency_cat_dss = factor(deathrecency_cat_dss, levels = c("0-4", "5-9", "10-14", "15+"))) %>%
   arrange(deathrecency_cat_dss, cstatus_agesp_dss, cstrata_c_binary) %>%
@@ -951,8 +912,37 @@ TabChiPeriodAgeC <- countsPeriodAgeC %>%
 
 
 
-ft <- flextable(TabChiPeriodAgeC) %>%
-  merge_v(j = ~ deathrecency_cat_dss + cstatus_agesp_dss + pvalcat) %>%
+table_with_headers <- TabChiPeriodAgeC  %>%
+  ungroup() %>%
+  mutate(across(everything(), as.character)) %>%
+  group_split(deathrecency_cat_dss, .keep = TRUE) %>%
+  map_dfr(function(df) {
+    header_row <- tibble(
+      deathrecency_cat_dss = unique(df$deathrecency_cat_dss),
+      cstatus_agesp_dss = "",
+      COD = "",
+      Agreement = "",
+      `Displaced backwards in FPH` = "", 
+      `Displaced forwards in FPH` = "", 
+      pvalcat  = ""
+    )
+    bind_rows(header_row, df)
+  }) %>%
+  mutate(deathrecency_cat_dss = factor(deathrecency_cat_dss, 
+                                       levels = c("0-4",  "5-9", "10-14"))) %>%
+  mutate(cstatus_agesp_dss = factor(cstatus_agesp_dss, 
+                                    levels = c("","Neonatal", "Postneonatal", "1-4 years"))) %>%
+  arrange(deathrecency_cat_dss, cstatus_agesp_dss) 
+
+
+table_with_headers$deathrecency_cat_dss <- as.character(table_with_headers$deathrecency_cat_dss)
+
+table_with_headers$deathrecency_cat_dss[table_with_headers$cstatus_agesp_dss != ""] <- ""
+
+
+
+ft <- flextable(table_with_headers) %>%
+  merge_v(j = ~  cstatus_agesp_dss + pvalcat) %>%
   set_header_labels(values = c("Recall period of death (years prior to validation study)",
                                "Age group of death", "COD",
                                "Agreement", "Displaced backwards in FPH", 
@@ -961,7 +951,7 @@ ft <- flextable(TabChiPeriodAgeC) %>%
   flextable::fontsize(size = 9, part = "all") %>%
   flextable::font(fontname = "Times New Roman", part = "all") %>%
   autofit() %>%
-  align(align = "right", j = 2:ncol(TabChiPeriodAgeC), part = "all") %>%
+  align(align = "right", j = 2:ncol(table_with_headers), part = "all") %>%
   align(align = "left", j = 1, part = "all")
 ft
 
@@ -973,119 +963,5 @@ doc <- read_docx() %>%
 output_path <- here::here("gen/tables", "table-period-displacement-ageCauseChi.docx")
 print(doc, target = output_path)
 cat("Saved to:", output_path, "\n")
-
-# Figure: period/age/cause transfers --------------------------------------
-
-# Figure for period/age/cause displacement
-
-# count
-p1 <- dat %>%
-  filter(cstatus_agesp_dss == cstatus_agesp_sur) %>%  # same age at death group
-  mutate(classified = case_when(
-    deathrecency_cat_dss == deathrecency_cat_sur ~ "correct",
-    deathrecency_cat_dss != deathrecency_cat_sur & deathrecency_cat_dss == "0-4" ~ "distantfph",
-    deathrecency_cat_dss != deathrecency_cat_sur & deathrecency_cat_dss == "5-9" &
-      deathrecency_cat_sur == "0-4" ~ "recentfph",
-    deathrecency_cat_dss != deathrecency_cat_sur & deathrecency_cat_dss == "5-9" &
-      deathrecency_cat_sur != "0-4" ~ "distantfph",
-    deathrecency_cat_dss != deathrecency_cat_sur & deathrecency_cat_dss == "10-14" &
-      deathrecency_cat_sur %in% c("0-4", "5-9") ~ "recentfph",
-    deathrecency_cat_dss != deathrecency_cat_sur & deathrecency_cat_dss == "10-14" &
-      !(deathrecency_cat_sur %in% c("0-4", "5-9")) ~ "distantfph",
-    deathrecency_cat_dss != deathrecency_cat_sur & deathrecency_cat_dss == "15+" &
-      deathrecency_cat_sur %in% c("0-4", "5-9", "10-14") ~ "recentfph",
-    TRUE ~ NA
-  )) %>%
-  group_by(deathrecency_cat_dss, cstatus_agesp_dss) %>%
-  count(cstrata_c, classified) %>%
-  group_by(deathrecency_cat_dss, cstatus_agesp_dss, cstrata_c) %>%
-  mutate(pct = n / sum(n) * 100) %>% 
-  mutate(labs = paste0(cstatus_agesp_dss , " - ", cstrata_c)) %>%
-  filter(deathrecency_cat_dss != "15+") %>%
-  mutate(labs = case_when(
-    labs == "10+ - 10+" ~ "10+ years",
-    labs == "5-9 - 5-9 year" ~ "5-9 years",
-    labs == "1-4 - Other" ~ "1-4 years - other",
-    labs == "1-4 - Drowning" ~ "1-4 years - drowning",
-    labs == "Postneonatal - Other" ~ "Postneonatal - other",
-    labs == "Postneonatal - RI and congenital" ~ "Postneonatal - RI and congenital",
-    labs == "Neonatal - Other" ~ "Neonatal - other",
-    labs == "Neonatal - Birth asphyxia" ~ "Neonatal - birth asphyxia",
-    TRUE ~ labs
-  )) %>%
-  mutate(labs = factor(labs, levels = c("10+ years", "5-9 years", "1-4 years - other", "1-4 years - drowning",
-                                        "Postneonatal - other", "Postneonatal - RI and congenital",
-                                        "Neonatal - other", "Neonatal - birth asphyxia"))) %>%
-  mutate(classified = factor(classified, levels = c("recentfph", "correct", "distantfph"),
-                             labels = c("Displaced forward in FPH" , "Agreement", "Displaced backward in FPH"))) %>%
-  ggplot() +
-  geom_bar(aes(x = labs, y = n, fill = classified), stat = "identity") +
-  facet_wrap(~deathrecency_cat_dss, ncol = 1) +
-  coord_flip() +
-  labs (y = "N", x = "") +
-  scale_fill_viridis_d(option = "plasma", direction = -1, begin = 0.1, end = 0.8, name = "") +
-  theme(legend.position = "bottom", 
-        legend.title = element_blank())  +
-  guides(fill = guide_legend(reverse = TRUE))
-# percent
-p2 <- dat %>%
-  filter(cstatus_agesp_dss == cstatus_agesp_sur) %>%  # same age at death group
-  mutate(classified = case_when(
-    deathrecency_cat_dss == deathrecency_cat_sur ~ "correct",
-    deathrecency_cat_dss != deathrecency_cat_sur & deathrecency_cat_dss == "0-4" ~ "distantfph",
-    deathrecency_cat_dss != deathrecency_cat_sur & deathrecency_cat_dss == "5-9" &
-      deathrecency_cat_sur == "0-4" ~ "recentfph",
-    deathrecency_cat_dss != deathrecency_cat_sur & deathrecency_cat_dss == "5-9" &
-      deathrecency_cat_sur != "0-4" ~ "distantfph",
-    deathrecency_cat_dss != deathrecency_cat_sur & deathrecency_cat_dss == "10-14" &
-      deathrecency_cat_sur %in% c("0-4", "5-9") ~ "recentfph",
-    deathrecency_cat_dss != deathrecency_cat_sur & deathrecency_cat_dss == "10-14" &
-      !(deathrecency_cat_sur %in% c("0-4", "5-9")) ~ "distantfph",
-    deathrecency_cat_dss != deathrecency_cat_sur & deathrecency_cat_dss == "15+" &
-      deathrecency_cat_sur %in% c("0-4", "5-9", "10-14") ~ "recentfph",
-    TRUE ~ NA
-  )) %>%
-  group_by(deathrecency_cat_dss, cstatus_agesp_dss) %>%
-  count(cstrata_c, classified) %>%
-  group_by(deathrecency_cat_dss, cstatus_agesp_dss, cstrata_c) %>%
-  mutate(pct = n / sum(n) * 100) %>% 
-  mutate(labs = paste0(cstatus_agesp_dss , " - ", cstrata_c)) %>%
-  filter(deathrecency_cat_dss != "15+") %>%
-  mutate(labs = case_when(
-    labs == "10+ - 10+" ~ "10+ years",
-    labs == "5-9 - 5-9 year" ~ "5-9 years",
-    labs == "1-4 - Other" ~ "1-4 years - other",
-    labs == "1-4 - Drowning" ~ "1-4 years - drowning",
-    labs == "Postneonatal - Other" ~ "Postneonatal - other",
-    labs == "Postneonatal - RI and congenital" ~ "Postneonatal - RI and congenital",
-    labs == "Neonatal - Other" ~ "Neonatal - other",
-    labs == "Neonatal - Birth asphyxia" ~ "Neonatal - birth asphyxia",
-    TRUE ~ labs
-  )) %>%
-  mutate(labs = factor(labs, levels = c("10+ years", "5-9 years", "1-4 years - other", "1-4 years - drowning",
-                                        "Postneonatal - other", "Postneonatal - RI and congenital",
-                                        "Neonatal - other", "Neonatal - birth asphyxia"))) %>%
-  mutate(classified = factor(classified, levels = c("recentfph", "correct", "distantfph"),
-                             labels = c("Displaced forward in FPH" , "Agreement", "Displaced backward in FPH"))) %>%
-  ggplot() +
-  geom_bar(aes(x = labs, y = pct, fill = classified), stat = "identity") +
-  facet_wrap(~deathrecency_cat_dss, ncol = 1) +
-  coord_flip() +
-  labs (y = "%", x = "") +
-  scale_fill_viridis_d(option = "plasma", direction = -1, begin = 0.1, end = 0.8, name = "") +
-  theme(legend.position = "bottom", 
-        legend.title = element_blank())  +
-  guides(fill = guide_legend(reverse = TRUE))
-
-
-p1_nolegend <- p1 + theme(legend.position = "none")
-p2_nolegend <- p2 + theme(legend.position = "none", 
-                          axis.text.y = element_blank(),
-                          axis.ticks.y = element_blank())
-combined <- p1_nolegend + p2_nolegend +
-  plot_layout(guides = "collect") & 
-  theme(legend.position = "bottom")
-combined
-ggsave("./gen/figures/period-trans-agecause.png", combined, width = 8, height = 6, dpi = 300)
 
 

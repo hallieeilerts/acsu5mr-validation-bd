@@ -566,6 +566,10 @@ datnew <- datnew[order(datnew$rid_m, datnew$c220),]
 datnew$recnr <- NULL
 dat <- datnew
 
+# FOR THE PAPER
+# matches
+table(dat$match_n2, useNA = "always")
+# 1968 in both
 
 # Match: add new matches by name and DOB ---------------------------------------------------------
 
@@ -596,6 +600,7 @@ base <- dat %>%
          c215, c218, c219, c220, c223, c224, c228, c228_aa, c228_bb, c228_ccc) %>%
   mutate(dob_c = as.Date(dob_c))
 
+# Add new matches: child sex and exact DOB match
 # self-join within rid_m to get all row pairs
 pairs <- base %>%
   inner_join(base, by = "rid_m", suffix = c("_1", "_2")) %>%
@@ -604,7 +609,7 @@ pairs <- base %>%
     c220_2 = as.Date(c220_2),
     sex_match = sex_c_1 == c219_2,
     dob_diff  = abs(as.numeric(difftime(dob_c_1, c220_2, units = "days"))),
-    dob_match = dob_diff <= 31,
+    dob_match = dob_diff <= 0,
     potential_match = sex_match & dob_match
   )
 # pairs %>%
@@ -630,7 +635,7 @@ matches_to_apply <- potential_matches %>%
   select(rid_m, recnr_1, recnr_2) %>%
   distinct()
 nrow(matches_to_apply)
- # 131
+ # 81
 
 # does any recnr_2 (row to be dropped) show up in more than one match?
 # i.e. one survey row potentially matching multiple DSS rows
@@ -724,6 +729,11 @@ datnew <- datnew[order(datnew$rid_m, datnew$c220), ]
 datnew$recnr <- NULL
 dat <- datnew
 
+# FOR THE PAPER
+# matches
+table(dat$match_n2, useNA = "always")
+# 1968 in both, 79 new match
+
 # Rename variables with dss suffix ----------------------------------------
 
 # Rename columns that actually came from the DSS to make that clear
@@ -762,7 +772,13 @@ dat <- dat %>%
   rename(
     mstrata_a = sample, 
     mstrata_ac = sample2 
-  )
+  ) %>%
+  mutate(mstrata_ac = case_when(
+    mstrata_ac == "1-4 year (other)" ~ "1-4 years (other)",
+    mstrata_ac == "1-4 year (drowning)" ~ "1-4 years (drowning)",
+    mstrata_ac == "5-9 year" ~ "5-9 years",
+    TRUE ~ mstrata_ac
+  ))
 
 # make sure mstrata_a and mstrata_ac apply to all records for the mother
 # in this file, the unmatched records don't have it even though they should
@@ -793,11 +809,11 @@ dat <- dat %>%
     mstrata_ac == "Neonatal (other)" ~ "Other",
     mstrata_ac == "Stillbirth" ~ "Stillbirth",
     mstrata_ac == "Neonatal (birth asphyxia)" ~ "Birth Asphyxia",
-    mstrata_ac == "1-4 year (other)" ~ "Other",
+    mstrata_ac == "1-4 years (other)" ~ "Other",
     mstrata_ac == "Live birth" ~ NA,
     mstrata_ac == "2024all" ~ NA,
-    mstrata_ac == "5-9 year" ~ "NoStrata",
-    mstrata_ac == "1-4 year (drowning)" ~ "Drowning",
+    mstrata_ac == "5-9 years" ~ "NoStrata",
+    mstrata_ac == "1-4 years (drowning)" ~ "Drowning",
     mstrata_ac == "Postneonatal (RI+con)" ~ "RI+Congenital",
     mstrata_ac == "Postneonatal (other)" ~ "Other",
     TRUE ~ NA
@@ -842,9 +858,9 @@ dat <- dat %>%
     cstatus_dss == "Surviving" ~ "Surviving",
     cstatus_dss == "Died" & aadd_dss < 28 ~ "Neonatal",
     cstatus_dss == "Died" & aadd_dss >= 28 & aadd_dss < 365 ~ "Postneonatal",
-    cstatus_dss == "Died" & aadd_dss >= 365 & aadd_dss < 5*365 ~ "1-4",
-    cstatus_dss == "Died" & aadd_dss >= 5*365 & aadd_dss < 10*365 ~ "5-9",
-    cstatus_dss == "Died" & aadd_dss >= 10*365 ~ "10+",
+    cstatus_dss == "Died" & aadd_dss >= 365 & aadd_dss < 5*365 ~ "1-4 years",
+    cstatus_dss == "Died" & aadd_dss >= 5*365 & aadd_dss < 10*365 ~ "5-9 years",
+    cstatus_dss == "Died" & aadd_dss >= 10*365 ~ "10+ years",
     TRUE ~ NA
   )) 
 
@@ -917,9 +933,9 @@ dat <- dat %>%
     cstatus_sur == "Surviving" ~ "Surviving",
     cstatus_sur == "Died" & aadd_sur < 28 ~ "Neonatal",
     cstatus_sur == "Died" & aadd_sur >= 28 & aadd_sur < 365 ~ "Postneonatal",
-    cstatus_sur == "Died" & aadd_sur >= 365 & aadd_sur < 5*365 ~ "1-4",
-    cstatus_sur == "Died" & aadd_sur >= 5*365 & aadd_sur < 10*365 ~ "5-9",
-    cstatus_sur == "Died" & aadd_sur >= 10*365 ~ "10+",
+    cstatus_sur == "Died" & aadd_sur >= 365 & aadd_sur < 5*365 ~ "1-4 years",
+    cstatus_sur == "Died" & aadd_sur >= 5*365 & aadd_sur < 10*365 ~ "5-9 years",
+    cstatus_sur == "Died" & aadd_sur >= 10*365 ~ "10+ years",
     TRUE ~ NA
   )) 
 

@@ -175,8 +175,8 @@ dat <- dat %>%
     cstatus_dss == "Surviving" ~ "Surviving",
     cstatus_dss == "Died" & aadd_dss < 28 ~ "Neonatal",
     cstatus_dss == "Died" & aadd_dss >= 28 & aadd_dss < 365 ~ "Postneonatal",
-    cstatus_dss == "Died" & aadd_dss >= 365 & aadd_dss < 5*365 ~ "1-4",
-    cstatus_dss == "Died" & aadd_dss >= 5*365 & aadd_dss < 10*365 ~ "5-9",
+    cstatus_dss == "Died" & aadd_dss >= 365 & aadd_dss < 5*365 ~ "1-4 years",
+    cstatus_dss == "Died" & aadd_dss >= 5*365 & aadd_dss < 10*365 ~ "5-9 years",
     cstatus_dss == "Died" & aadd_dss >= 10*365 ~ "10+",
     TRUE ~ NA
   )) 

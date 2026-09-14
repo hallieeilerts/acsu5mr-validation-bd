@@ -87,10 +87,14 @@ dat <- dat %>%
                            labels = c("15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54")),
          magecat2_int = cut(mage_int,
                              breaks = c(15, seq(25, 45, 5), 55), 
-                             labels = c("15-24", "25-29", "30-34", "35-39", "40-44", "45+"))) 
+                             labels = c("15-24", "25-29", "30-34", "35-39", "40-44", "45+")),
+         magecat3_int = cut(mage_int,
+                            breaks = c(15, 25, 35, 55),
+                            labels = c("15-24", "25-34", "35+"))) 
 nrow(subset(dat, is.na(mage_int))) # 0
 nrow(subset(dat, is.na(magecat_int))) # 0
 nrow(subset(dat, is.na(magecat2_int))) # 0
+nrow(subset(dat, is.na(magecat3_int))) # 0
 ## check breaks
 # dat %>%
 #   select(mage_int, magecat_int, magecat2_int) %>%
@@ -101,9 +105,10 @@ nrow(subset(dat, is.na(magecat2_int))) # 0
 df_parity <- dat %>%
   group_by(rid_m) %>%
   summarise(paritymax_dss = max(parity_dss, na.rm = TRUE)) %>%
-  mutate(paritymaxcat_dss = cut(paritymax_dss, breaks = c(0,1,2,3,10), labels = c("1","2","3", "4+")))
+  mutate(paritymaxcat_dss = cut(paritymax_dss, breaks = c(0,1,2,10), labels = c("1","2","3+")))
 nrow(subset(df_parity, is.na(paritymaxcat_dss))) # 0
 nrow(subset(df_parity, paritymax_dss == 0)) # 0
+table(df_parity$paritymax_dss, df_parity$paritymaxcat_dss)
 dat <- dat %>%
   left_join(df_parity, by = "rid_m") %>%
   relocate(paritymax_dss, .after = parity_dss) %>%
@@ -118,9 +123,10 @@ dat <- dat %>%
 df_parity <- dat %>%
   group_by(rid_m) %>%
   summarise(paritymax_sur = max(as.numeric(parity_sur), na.rm = TRUE)) %>%
-  mutate(paritymaxcat_sur = cut(paritymax_sur, breaks = c(0,1,2,3,10), labels = c("1","2","3", "4+")))
+  mutate(paritymaxcat_sur = cut(paritymax_sur, breaks = c(0,1,2,10), labels = c("1","2","3+")))
 nrow(subset(df_parity, is.na(paritymaxcat_sur))) # 1
 nrow(subset(df_parity, paritymax_sur == 0)) # 0
+table(df_parity$paritymax_sur, df_parity$paritymaxcat_sur)
 dat <- dat %>%
   left_join(df_parity, by = "rid_m") %>%
   relocate(paritymax_sur, .after = parity_sur) %>%
@@ -149,7 +155,13 @@ df_meducat <- dat %>%
   mutate(hasmeducat = ifelse(!is.na(meducat), 1, 0)) %>%
   group_by(rid_m) %>%
   mutate(hasmeducat = sum(hasmeducat)) %>%
-  mutate(meducat_sur = ifelse(hasmeducat == 0, "Missing", as.character(meducat))) %>%
+ # mutate(meducat_sur = ifelse(hasmeducat == 0, "Missing", as.character(meducat))) %>%
+  mutate(meducat_sur = case_when(
+    hasmeducat == 0 ~ "Missing",
+    meducat == "None" ~ "None",
+    meducat == "Primary" ~ "Primary",
+    meducat %in% c("Secondary", "Higher secondary") ~ "Secondary or higher"
+  )) %>%
   #select(rid_m, type, pregout_dss, c244, hasc244, observer_sur) %>% filter(rid_m == "2A00012205") 
   select(rid_m, meducat_sur) %>%
   distinct() %>%
@@ -199,7 +211,11 @@ df_int_observer <- dat %>%
   mutate(hasc244 = ifelse(!is.na(c244), 1, 0)) %>%
   group_by(rid_m) %>%
   mutate(hasc244 = sum(hasc244)) %>%
-  mutate(observer_sur = ifelse(hasc244 == 0, "Missing", as.character(c244))) %>%
+  mutate(observer_sur = case_when(
+    hasc244 == 0 ~ "Missing",
+    c244 %in% c("Full time", "Partial") ~ "Yes",
+    c244 == "No one" ~ "No"
+  )) %>%
   #select(rid_m, type, pregout_dss, c244, hasc244, observer_sur) %>% filter(rid_m == "2A00012205") 
   select(rid_m, observer_sur) %>%
   distinct() %>%
@@ -230,8 +246,11 @@ df_intinterupt <- dat %>%
   mutate(hasd2 = ifelse(!is.na(d2), 1, 0)) %>%
   group_by(rid_m) %>%
   mutate(hasd2 = sum(hasd2)) %>%
-  mutate(intinterupt_sur = ifelse(hasd2 == 0, "Missing", as.character(d2))) %>%
-  #select(rid_m, type, pregout_dss, c244, hasc244, observer_sur) %>% filter(rid_m == "2A00012205") 
+  mutate(intinterupt_sur = case_when(
+    hasd2 == 0 ~ "Missing",
+    d2 %in% c("Fully", "Partially") ~ "Yes",
+    d2 == "Not at all" ~ "No"
+  )) %>%
   select(rid_m, intinterupt_sur) %>%
   distinct() %>%
   filter(!is.na(intinterupt_sur))
@@ -261,7 +280,12 @@ df_intcoop <- dat %>%
   mutate(hasd7 = ifelse(!is.na(d7), 1, 0)) %>%
   group_by(rid_m) %>%
   mutate(hasd7 = sum(hasd7)) %>%
-  mutate(intcoop_sur = ifelse(hasd7 == 0, "Missing", as.character(d7))) %>%
+  #mutate(intcoop_sur = ifelse(hasd7 == 0, "Missing", as.character(d7))) %>%
+  mutate(intcoop_sur = case_when(
+    hasd7 == 0 ~ "Missing",
+    d7 %in% c("Good", "Very good") ~ "Good or very good",
+    d7 == "Normal" ~ "Normal"
+  )) %>%
   #select(rid_m, type, pregout_dss, c244, hasc244, observer_sur) %>% filter(rid_m == "2A00012205") 
   select(rid_m, intcoop_sur) %>%
   distinct() %>%
@@ -331,10 +355,10 @@ df_breakdown <- dat %>%
 unique(df_breakdown$breakdown_sur)
 df_breakdown <- df_breakdown %>%
   mutate(breakdown_sur = case_when(
-    breakdown_sur == "Not at all (Normal)" ~ "None",
-    breakdown_sur == "A little (Felt sad)" ~ "Mild",
-    breakdown_sur == "Moderate (Stayed silent for a while)" ~ "Moderate",
-    breakdown_sur == "High (Cried)" ~ "Severe",
+    breakdown_sur == "Not at all (Normal)" ~ "No",
+    breakdown_sur == "A little (Felt sad)" ~ "Yes",
+    breakdown_sur == "Moderate (Stayed silent for a while)" ~ "Yes",
+    breakdown_sur == "High (Cried)" ~ "Yes",
     TRUE ~ breakdown_sur
   ))
 # check we have a value for all mothers
@@ -408,8 +432,6 @@ dat <- dat %>%
   left_join(df_hhsize, by = "rid_m") %>%
   relocate(hhsize_sur, .after = HH_size) 
 
-
-
 # # household size (small, medium, large)
 # table(dat$HH_size, useNA = "always")
 # # it is only missing for the unmatched records from the HDSS
@@ -424,8 +446,6 @@ dat <- dat %>%
 #   filter(n > 1) %>%
 #   nrow() # 0
 
-
-
 # there was already a HH_size variable
 table(dat$hhsize_sur, dat$HH_size, useNA = "always")
 # use that to categorize hhsize_sur
@@ -434,7 +454,7 @@ df_hhsizecat <- dat %>%
   mutate(hasHHsize = ifelse(!is.na(a1), 1, 0)) %>%
   group_by(rid_m) %>%
   mutate(hasHHsize = sum(hasHHsize)) %>%
-  mutate(hhsizecat_sur = cut(a1, breaks = c(0, 4, 7, 20), labels = c("Small", "Medium", "Large"))) %>%
+  mutate(hhsizecat_sur = cut(a1, breaks = c(0, 3, 6, 20), labels = c("1-3", "4-6", "7+"))) %>%
   mutate(hhsizecat_sur = ifelse(hasHHsize == 0, "Missing", as.character(hhsizecat_sur))) %>%
   select(rid_m, hhsizecat_sur) %>%
   distinct() %>%
@@ -500,7 +520,8 @@ dat <- dat %>%
 # combined birth order (deferring to dss)
 dat <- dat %>%
   mutate(birthorder_comb = coalesce(as.numeric(parity_dss), as.numeric(parity_sur))) %>%
-  mutate(birthorder_cat_comb = cut(birthorder_comb, breaks = c(0,1,2,3,100), labels = c("1","2","3", "4+")))
+  mutate(birthorder_cat_comb = cut(birthorder_comb, breaks = c(0,1,2,100), labels = c("1","2","3+")))
+table(dat$birthorder_comb, dat$birthorder_cat_comb)
 # # check breaks
 # dat %>%
 #   select(birthorder_comb,birthorder_cat_comb) %>%
@@ -509,7 +530,7 @@ dat <- dat %>%
 # combined parity max (deferring to dss)
 dat <- dat %>%
   mutate(paritymax_comb = coalesce(paritymax_dss, paritymax_sur)) %>%
-  mutate(paritymaxcat_comb = cut(paritymax_comb, breaks = c(0,1,2,3,10), labels = c("1","2","3", "4+")))
+  mutate(paritymaxcat_comb = cut(paritymax_comb, breaks = c(0,1,2,10), labels = c("1","2","3+")))
 
 # combined cstatus (deferring to dss)
 dat <- dat %>%
@@ -557,12 +578,15 @@ nrow(subset(dat, is.na(deathrecency))) # 2387
 dat <- dat %>%
   mutate(cstrata_a = case_when( 
     cstrata_ac == "Surviving" ~ "Surviving",
+    cstrata_ac == "Neonatal (unknown)" ~ "Neonatal",
     cstrata_ac == "Neonatal (other)" ~ "Neonatal",
     cstrata_ac == "Neonatal (birth asphyxia)" ~ "Neonatal",
     cstrata_ac == "Postneonatal (other)" ~ "Postneonatal",
     cstrata_ac ==  "Postneonatal (RI+con)"  ~ "Postneonatal",
-    cstrata_ac == "1-4 year (other)" ~ "1-4 year",
-    cstrata_ac ==  "1-4 year (drowning)"  ~ "1-4 year",
+    cstrata_ac == "Postneonatal (unknown)" ~ "Postneonatal",
+    cstrata_ac == "1-4 years (other)" ~ "1-4 years",
+    cstrata_ac ==  "1-4 years (drowning)"  ~ "1-4 years",
+    cstrata_ac ==  "1-4 years (unknown)"  ~ "1-4 years",
     TRUE ~ cstrata_ac
   )) 
 
@@ -572,10 +596,13 @@ dat <- dat %>%
     cstrata_ac == "Surviving" ~ "Surviving",
     cstrata_ac == "Neonatal (other)" ~ "Other",
     cstrata_ac == "Neonatal (birth asphyxia)" ~ "Birth asphyxia",
+    cstrata_ac == "Neonatal (unknown)" ~ "Unknown",
     cstrata_ac == "Postneonatal (other)" ~ "Other",
     cstrata_ac ==  "Postneonatal (RI+con)"  ~ "RI and congenital",
-    cstrata_ac == "1-4 year (other)" ~ "Other",
-    cstrata_ac ==  "1-4 year (drowning)"  ~ "Drowning",
+    cstrata_ac == "Postneonatal (unknown)" ~ "Unknown",
+    cstrata_ac == "1-4 years (other)" ~ "Other",
+    cstrata_ac ==  "1-4 years (drowning)"  ~ "Drowning",
+    cstrata_ac ==  "1-4 years (unknown)"  ~ "Unknown",
     TRUE ~ cstrata_ac
   )) 
 
@@ -586,10 +613,13 @@ dat <- dat %>%
            cstrata_ac == "Surviving" ~ "Surviving",
            cstrata_ac == "Neonatal (other)" ~ "Non-leading",
            cstrata_ac == "Neonatal (birth asphyxia)" ~ "Leading",
+           cstrata_ac == "Neonatal (unknown)" ~ "Unknown",
            cstrata_ac == "Postneonatal (other)" ~ "Non-leading",
            cstrata_ac ==  "Postneonatal (RI+con)"  ~ "Leading",
-           cstrata_ac == "1-4 year (other)" ~ "Non-leading",
-           cstrata_ac ==  "1-4 year (drowning)"  ~ "Leading",
+           cstrata_ac == "Postneonatal (unknown)" ~ "Unknown",
+           cstrata_ac == "1-4 years (other)" ~ "Non-leading",
+           cstrata_ac ==  "1-4 years (drowning)"  ~ "Leading",
+           cstrata_ac ==  "1-4 years (unknown)"  ~ "Unknown",
            TRUE ~ "No COD strata"
          )) 
 

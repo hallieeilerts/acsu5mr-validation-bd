@@ -444,8 +444,8 @@ dat <- dat %>%
     cstatus_sur == "Surviving" ~ "Surviving",
     cstatus_sur == "Died" & aadd_sur < 28 ~ "Neonatal",
     cstatus_sur == "Died" & aadd_sur >= 28 & aadd_sur < 365 ~ "Postneonatal",
-    cstatus_sur == "Died" & aadd_sur >= 365 & aadd_sur < 5*365 ~ "1-4",
-    cstatus_sur == "Died" & aadd_sur >= 5*365 & aadd_sur < 10*365 ~ "5-9",
+    cstatus_sur == "Died" & aadd_sur >= 365 & aadd_sur < 5*365 ~ "1-4 years",
+    cstatus_sur == "Died" & aadd_sur >= 5*365 & aadd_sur < 10*365 ~ "5-9 years",
     cstatus_sur == "Died" & aadd_sur >= 10*365 ~ "10+",
     TRUE ~ NA
   )) 

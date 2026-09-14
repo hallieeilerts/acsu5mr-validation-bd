@@ -419,12 +419,18 @@ probs_grid_m2 <- get_predicted_probs_grid(m2, "m2")
 
 probs_grid_tab <- probs_grid_m2 %>%
   mutate(
-    CF1         = sprintf("%.2f", round(1/(1-Omission_est), 2)),
-    CF1_lci     = sprintf("%.2f", round(1/(1-Omission_lci), 2)),
-    CF1_uci     = sprintf("%.2f", round(1/(1-Omission_uci), 2)),
-    CF2         = sprintf("%.2f", round((1-Addition_est)/(1-Omission_est), 2)),
-    CF2_lci     = sprintf("%.2f", round((1-Addition_lci)/(1-Omission_lci), 2)),
-    CF2_uci     = sprintf("%.2f", round((1-Addition_uci)/(1-Omission_uci), 2)),
+    CF1_raw     = 1/(1-Omission_est),
+    CF1_lci_raw = 1/(1-Omission_lci),
+    CF1_uci_raw = 1/(1-Omission_uci),
+    CF1         = sprintf("%.2f", round(CF1_raw, 2)),
+    CF1_lci     = sprintf("%.2f", round(pmin(CF1_lci_raw, CF1_uci_raw), 2)),
+    CF1_uci     = sprintf("%.2f", round(pmax(CF1_lci_raw, CF1_uci_raw), 2)),
+    CF2_raw     = (1-Addition_est)/(1-Omission_est),
+    CF2_lci_raw = (1-Addition_uci)/(1-Omission_lci),
+    CF2_uci_raw = (1-Addition_lci)/(1-Omission_uci),
+    CF2         = sprintf("%.2f", round(CF2_raw, 2)),
+    CF2_lci     = sprintf("%.2f", round(pmin(CF2_lci_raw, CF2_uci_raw), 2)),
+    CF2_uci     = sprintf("%.2f", round(pmax(CF2_lci_raw, CF2_uci_raw), 2)),
     Match_est    = sprintf("%.2f", round(Match_est*100, 2)),
     Match_lci    = sprintf("%.2f",round(Match_lci*100, 2)),
     Match_uci    = sprintf("%.2f",round(Match_uci*100, 2)),
@@ -434,12 +440,13 @@ probs_grid_tab <- probs_grid_m2 %>%
     Addition_est = sprintf("%.2f",round(Addition_est*100, 2)),
     Addition_lci = sprintf("%.2f",round(Addition_lci*100, 2)),
     Addition_uci = sprintf("%.2f",round(Addition_uci*100, 2)),
-    Match_ci = paste0("(", Match_lci, ", ", Match_uci, ")"),
+    Match_ci    = paste0("(", Match_lci, ", ", Match_uci, ")"),
     Omission_ci = paste0("(", Omission_lci, ", ", Omission_uci, ")"),
     Addition_ci = paste0("(", Addition_lci, ", ", Addition_uci, ")"),
-    CF1_ci = paste0("(", CF1_lci, ", ", CF1_uci, ")"),
-    CF2_ci = paste0("(", CF2_lci, ", ", CF2_uci, ")")
-  ) 
+    CF1_ci      = paste0("(", CF1_lci, ", ", CF1_uci, ")"),
+    CF2_ci      = paste0("(", CF2_lci, ", ", CF2_uci, ")")
+  ) %>%
+  select(-CF1_raw, -CF1_lci_raw, -CF1_uci_raw, -CF2_raw, -CF2_lci_raw, -CF2_uci_raw)
 probs_grid_coef <-  probs_grid_tab %>%
   dplyr::select(cstatus_agesp_comb, Match_est, Omission_est, Addition_est,
                 CF1, CF2) %>%
@@ -500,8 +507,6 @@ cat("Saved to:", output_path, "\n")
 
 # multi predicted probs for age/period ------------------------------------
 
-
-
 # To obtain 95% confidence intervals for predicted probabilities, we used a parametric bootstrap (simulation-based) approach. Because predicted probabilities are a nonlinear transformation of the model's log-odds coefficients, standard errors from the model cannot be directly translated into valid confidence intervals for probabilities. We therefore drew 2,000 simulated coefficient sets from a multivariate normal distribution defined by the model's estimated coefficients and their covariance matrix, calculated the predicted probability for each simulated draw, and took the 2.5th and 97.5th percentiles of the resulting distribution as the 95% confidence interval
 # Predicted probabilities with 95% CIs derived via parametric bootstrap (2,000 simulations from the model's coefficient covariance matrix).
 
@@ -509,12 +514,18 @@ probs_grid_m3 <- get_predicted_probs_grid(m3, "m3")
 
 probs_grid_tab <- probs_grid_m3 %>%
   mutate(
-    CF1         = sprintf("%.2f", round(1/(1-Omission_est), 2)),
-    CF1_lci     = sprintf("%.2f", round(1/(1-Omission_lci), 2)),
-    CF1_uci     = sprintf("%.2f", round(1/(1-Omission_uci), 2)),
-    CF2         = sprintf("%.2f", round((1-Addition_est)/(1-Omission_est), 2)),
-    CF2_lci     = sprintf("%.2f", round((1-Addition_lci)/(1-Omission_lci), 2)),
-    CF2_uci     = sprintf("%.2f", round((1-Addition_uci)/(1-Omission_uci), 2)),
+    CF1_raw     = 1/(1-Omission_est),
+    CF1_lci_raw = 1/(1-Omission_lci),
+    CF1_uci_raw = 1/(1-Omission_uci),
+    CF1         = sprintf("%.2f", round(CF1_raw, 2)),
+    CF1_lci     = sprintf("%.2f", round(pmin(CF1_lci_raw, CF1_uci_raw), 2)),
+    CF1_uci     = sprintf("%.2f", round(pmax(CF1_lci_raw, CF1_uci_raw), 2)),
+    CF2_raw     = (1-Addition_est)/(1-Omission_est),
+    CF2_lci_raw = (1-Addition_uci)/(1-Omission_lci),
+    CF2_uci_raw = (1-Addition_lci)/(1-Omission_uci),
+    CF2         = sprintf("%.2f", round(CF2_raw, 2)),
+    CF2_lci     = sprintf("%.2f", round(pmin(CF2_lci_raw, CF2_uci_raw), 2)),
+    CF2_uci     = sprintf("%.2f", round(pmax(CF2_lci_raw, CF2_uci_raw), 2)),
     Match_est    = sprintf("%.2f", round(Match_est*100, 2)),
     Match_lci    = sprintf("%.2f",round(Match_lci*100, 2)),
     Match_uci    = sprintf("%.2f",round(Match_uci*100, 2)),
@@ -524,12 +535,13 @@ probs_grid_tab <- probs_grid_m3 %>%
     Addition_est = sprintf("%.2f",round(Addition_est*100, 2)),
     Addition_lci = sprintf("%.2f",round(Addition_lci*100, 2)),
     Addition_uci = sprintf("%.2f",round(Addition_uci*100, 2)),
-    Match_ci = paste0("(", Match_lci, ", ", Match_uci, ")"),
+    Match_ci    = paste0("(", Match_lci, ", ", Match_uci, ")"),
     Omission_ci = paste0("(", Omission_lci, ", ", Omission_uci, ")"),
     Addition_ci = paste0("(", Addition_lci, ", ", Addition_uci, ")"),
-    CF1_ci = paste0("(", CF1_lci, ", ", CF1_uci, ")"),
-    CF2_ci = paste0("(", CF2_lci, ", ", CF2_uci, ")")
-  ) 
+    CF1_ci      = paste0("(", CF1_lci, ", ", CF1_uci, ")"),
+    CF2_ci      = paste0("(", CF2_lci, ", ", CF2_uci, ")")
+  ) %>%
+  select(-CF1_raw, -CF1_lci_raw, -CF1_uci_raw, -CF2_raw, -CF2_lci_raw, -CF2_uci_raw)
 
 probs_grid_coef <-  probs_grid_tab %>%
   dplyr::select(cstatus_agesp_comb, deathrecency_cat,

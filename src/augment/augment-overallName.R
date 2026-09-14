@@ -96,7 +96,7 @@ cod_key <- overall %>%
   filter(type == "VS_Match" & cstatus_dss == "Died" & mstrata_ac != "2024all") %>%
   filter(mstrata_a == "Neonatal" & cstatus_agesp_dss == "Neonatal" |
            mstrata_a == "Postneonatal" & cstatus_agesp_dss == "Postneonatal" | 
-           mstrata_a == "1-4" & cstatus_agesp_dss == "1-4") %>%
+           mstrata_a == "1-4 years" & cstatus_agesp_dss == "1-4 years") %>%
   group_by(rid_m) %>% # rid_m is mother id, c215_a is her child number
   mutate(n = n()) %>%
   ungroup() %>%
@@ -124,7 +124,7 @@ cod_key <- cod_key %>%
   filter(!(cstatus_agesp_dss == "Postneonatal" & cod_c_dss == "1G40" & mstrata_ac != "Postneonatal (other)")) %>%
   filter(!(cstatus_agesp_dss == "Neonatal" & cod_c_dss == "KA21" & mstrata_ac != "Neonatal (other)")) %>%
   filter(!(cstatus_agesp_dss == "Neonatal" & cod_c_dss == "KB21" & mstrata_ac != "Neonatal (birth asphyxia)")) %>%
-  filter(!(cstatus_agesp_dss == "1-4" & cod_c_dss == "PA91" & mstrata_ac != "1-4 year (drowning)")) %>%
+  filter(!(cstatus_agesp_dss == "1-4 years" & cod_c_dss == "PA91" & mstrata_ac != "1-4 years (drowning)")) %>%
   rename(cstrata_ac = mstrata_ac)
 
 # Should these cases be corrected in the overall file as well?
@@ -202,10 +202,10 @@ hdss %>% filter(rid_m == "3D34013908") %>%
 
 # case 4
 overall %>%
-  filter(mstrata_ac == "1-4 year (other)" & cod_c_dss == "PA91") %>%
+  filter(mstrata_ac == "1-4 years (other)" & cod_c_dss == "PA91") %>%
   nrow() # 2
 overall %>%
-  filter(mstrata_ac == "1-4 year (other)" & cod_c_dss == "PA91") %>%
+  filter(mstrata_ac == "1-4 years (other)" & cod_c_dss == "PA91") %>%
   select(rid_m) %>% pull() %>% unique() # "2V17004007" "5DX0053610"
 # there are two mothers
 # mother 1 has two children. only one died. so there is no ambiguity in who PA91 applies to.
@@ -228,7 +228,7 @@ overall <- overall %>%
       !(rid_m %in% v_exceptions) & mstrata_ac == "Postneonatal (RI+con)" & cod_c_dss == "1G40" ~ "Postneonatal (other)",
       !(rid_m %in% v_exceptions) & mstrata_ac == "Neonatal (birth asphyxia)" & cod_c_dss == "KA21" ~ "Neonatal (other)",
       !(rid_m %in% v_exceptions) & mstrata_ac == "Neonatal (other)" & cod_c_dss == "KB21" ~ "Neonatal (birth asphyxia)",
-      !(rid_m %in% v_exceptions) & mstrata_ac == "1-4 year (other)" & cod_c_dss == "PA91" ~ "1-4 year (drowning)",
+      !(rid_m %in% v_exceptions) & mstrata_ac == "1-4 years (other)" & cod_c_dss == "PA91" ~ "1-4 years (drowning)",
       TRUE ~ mstrata_ac
     )
   )
@@ -242,8 +242,8 @@ overall <- overall %>%
   mutate(cstrata_ac = case_when(
     is.na(cstrata_ac) & cstatus_agesp_dss == "Surviving" ~ "Surviving",
     is.na(cstrata_ac) & cstatus_agesp_dss == "Stillbirth" ~ "Stillbirth",
-    is.na(cstrata_ac) & cstatus_agesp_dss == "5-9" ~ "5-9 year",
-    is.na(cstrata_ac) & cstatus_agesp_dss == "10+" ~ "10+",
+    is.na(cstrata_ac) & cstatus_agesp_dss == "5-9 years" ~ "5-9 years",
+    is.na(cstrata_ac) & cstatus_agesp_dss == "10+ years" ~ "10+ years",
     TRUE ~ cstrata_ac
   )) 
 
@@ -274,15 +274,15 @@ unique(overall$cstrata_ac)
 overall <- overall %>%
   mutate(flag = ifelse(type == "VS_Match" & is.na(cstrata_ac), 1, 0)) %>%
   mutate(cstrata_ac = case_when(
-    is.na(cstrata_ac) & cstatus_agesp_dss == "1-4" & cod_c_dss == "460" ~ "1-4 year (other)", # common cold
+    is.na(cstrata_ac) & cstatus_agesp_dss == "1-4 years" & cod_c_dss == "460" ~ "1-4 years (other)", # common cold
     is.na(cstrata_ac) & cstatus_agesp_dss == "Neonatal" & cod_c_dss == "P11" ~  "Neonatal (other)", # birth injuries
-    is.na(cstrata_ac) & cstatus_agesp_dss == "1-4" & cod_c_dss == "X10" ~ "1-4 year (other)", # burns
+    is.na(cstrata_ac) & cstatus_agesp_dss == "1-4 years" & cod_c_dss == "X10" ~ "1-4 years (other)", # burns
     is.na(cstrata_ac) & cstatus_agesp_dss == "Postneonatal" & cod_c_dss == "R50" ~  "Postneonatal (other)", # fever
     is.na(cstrata_ac) & cstatus_agesp_dss == "Postneonatal" & cod_c_dss == "8A63" ~  "Postneonatal (other)", # seizure
     is.na(cstrata_ac) & cstatus_agesp_dss == "Neonatal" & cod_c_dss == "P55" ~  "Neonatal (other)", # hemolytic disease
     is.na(cstrata_ac) & cstatus_agesp_dss == "Postneonatal" & cod_c_dss == "Q89" ~  "Postneonatal (RI+con)", # congenital
     is.na(cstrata_ac) & cstatus_agesp_dss == "Postneonatal" & cod_c_dss == "G12" ~  "Postneonatal (other)", # congenital
-    is.na(cstrata_ac) & cstatus_agesp_dss == "1-4" & cod_c_dss == "G40" ~  "1-4 year (other)", # seizure
+    is.na(cstrata_ac) & cstatus_agesp_dss == "1-4 years" & cod_c_dss == "G40" ~  "1-4 years (other)", # seizure
     is.na(cstrata_ac) & cstatus_agesp_dss == "Neonatal" & cod_c_dss == "321" ~  "Neonatal (other)", # icd9, meningitis
     is.na(cstrata_ac) & cstatus_agesp_dss == "Neonatal" & cod_c_dss == "KB86" ~  "Neonatal (other)", # pancreas
     is.na(cstrata_ac) & cstatus_agesp_dss == "Neonatal" & cod_c_dss == "452" ~  "Neonatal (other)", # blood clot
@@ -293,14 +293,14 @@ overall <- overall %>%
     is.na(cstrata_ac) & cstatus_agesp_dss == "Postneonatal" & cod_c_dss == "LD2Z" ~  "Postneonatal (other)", # developmental anomaly
     is.na(cstrata_ac) & cstatus_agesp_dss == "Neonatal" & cod_c_dss == "P00" ~  "Neonatal (other)", # maternal conditions
     is.na(cstrata_ac) & cstatus_agesp_dss == "Neonatal" & cod_c_dss == "KB24" ~  "Neonatal (other)", # congenital pneumonia
-    is.na(cstrata_ac) & cstatus_agesp_dss == "1-4" & cod_c_dss == "E46" ~  "1-4 year (other)", # protein calorie malnutrition
+    is.na(cstrata_ac) & cstatus_agesp_dss == "1-4 years" & cod_c_dss == "E46" ~  "1-4 years (other)", # protein calorie malnutrition
     is.na(cstrata_ac) & cstatus_agesp_dss == "Postneonatal" & cod_c_dss == "E46" ~  "Postneonatal (other)", # protein calorie malnutrition
-    is.na(cstrata_ac) & cstatus_agesp_dss == "1-4" & cod_c_dss == "G03" ~  "1-4 year (other)", # meningitis
+    is.na(cstrata_ac) & cstatus_agesp_dss == "1-4 years" & cod_c_dss == "G03" ~  "1-4 years (other)", # meningitis
     is.na(cstrata_ac) & cstatus_agesp_dss == "Neonatal" & cod_c_dss == "CA40" ~  "Neonatal (other)", # neoplasm
-    is.na(cstrata_ac) & cstatus_agesp_dss == "1-4" & cod_c_dss == "C26" ~  "1-4 year (other)", # neoplasm
+    is.na(cstrata_ac) & cstatus_agesp_dss == "1-4 years" & cod_c_dss == "C26" ~  "1-4 years (other)", # neoplasm
     is.na(cstrata_ac) & cstatus_agesp_dss == "Neonatal" & cod_c_dss == "1A41" ~  "Neonatal (other)", # sepsis
     is.na(cstrata_ac) & cstatus_agesp_dss == "Neonatal" & cod_c_dss == "KA84" ~  "Neonatal (other)", # hemolytic disease
-    is.na(cstrata_ac) & cstatus_agesp_dss == "1-4" & cod_c_dss == "2C80" ~  "1-4 year (other)", # neoplasm
+    is.na(cstrata_ac) & cstatus_agesp_dss == "1-4 years" & cod_c_dss == "2C80" ~  "1-4 years (other)", # neoplasm
     TRUE ~ cstrata_ac
   ))  #%>%
 # filter(flag == 1) %>%
@@ -365,8 +365,8 @@ hdss_nomatch <- hdss_nomatch %>%
     is.na(cstrata_ac) & cstatus_agesp_dss == "Miscarriage" ~ "Miscarriage",
     is.na(cstrata_ac) & cstatus_agesp_dss == "Surviving" ~ "Surviving",
     is.na(cstrata_ac) & cstatus_agesp_dss == "Stillbirth" ~ "Stillbirth",
-    is.na(cstrata_ac) & cstatus_agesp_dss == "5-9" ~ "5-9 year",
-    is.na(cstrata_ac) & cstatus_agesp_dss == "10+" ~ "10+",
+    is.na(cstrata_ac) & cstatus_agesp_dss == "5-9 years" ~ "5-9 years",
+    is.na(cstrata_ac) & cstatus_agesp_dss == "10+ years" ~ "10+ years",
     TRUE ~ cstrata_ac
   ))
 
@@ -414,8 +414,8 @@ cod_fill <- overall_aug1 %>%
       mstrata_ac %in% c("Postneonatal (other)", "Postneonatal (RI+con)") & 
       cstatus_agesp_dss == "Postneonatal" & !(cod_c_dss %in% c("R99", "MH14")) & !is.na(cod_c_dss) ~ mstrata_ac,
     is.na(cstrata_ac) & n == 1 & 
-      mstrata_ac %in% c("1-4 year (other)", "1-4 year (drowning)") & 
-      cstatus_agesp_dss == "1-4" & !(cod_c_dss %in% c("R99", "MH14")) & !is.na(cod_c_dss) ~ mstrata_ac,
+      mstrata_ac %in% c("1-4 years (other)", "1-4 years (drowning)") & 
+      cstatus_agesp_dss == "1-4 years" & !(cod_c_dss %in% c("R99", "MH14")) & !is.na(cod_c_dss) ~ mstrata_ac,
     TRUE ~ cstrata_ac
   )) %>%
   select(-n)
@@ -448,14 +448,14 @@ overall_aug1 <- overall_aug1 %>%
     is.na(cstrata_ac) & type == "VS_NoMatch" & cstatus_agesp_sur == "Surviving" ~ "Surviving",
     is.na(cstrata_ac) & type == "VS_NoMatch" & cstatus_agesp_sur == "Neonatal" ~ "Neonatal (unknown)",
     is.na(cstrata_ac) & type == "VS_NoMatch" & cstatus_agesp_sur == "Postneonatal" ~ "Postneonatal (unknown)",
-    is.na(cstrata_ac) & type == "VS_NoMatch" & cstatus_agesp_sur == "1-4" ~ "1-4 year (unknown)",
-    is.na(cstrata_ac) & type == "VS_NoMatch" & cstatus_agesp_sur == "5-9" ~ "5-9 year",
-    is.na(cstrata_ac) & type == "VS_NoMatch" & cstatus_agesp_sur == "10+" ~ "10+",
+    is.na(cstrata_ac) & type == "VS_NoMatch" & cstatus_agesp_sur == "1-4 years" ~ "1-4 years (unknown)",
+    is.na(cstrata_ac) & type == "VS_NoMatch" & cstatus_agesp_sur == "5-9 years" ~ "5-9 years",
+    is.na(cstrata_ac) & type == "VS_NoMatch" & cstatus_agesp_sur == "10+ years" ~ "10+ years",
     is.na(cstrata_ac) & type %in% c("VS_Match", "HDSS_NoMatch") & cstatus_agesp_dss == "Neonatal" ~ "Neonatal (other)",
     is.na(cstrata_ac) & type %in% c("VS_Match", "HDSS_NoMatch") & cstatus_agesp_dss == "Postneonatal" ~ "Postneonatal (other)",
-    is.na(cstrata_ac) & type %in% c("VS_Match", "HDSS_NoMatch") & cstatus_agesp_dss == "1-4" ~ "1-4 year (other)",
-    is.na(cstrata_ac) & type %in% c("VS_Match", "HDSS_NoMatch") & cstatus_agesp_dss == "5-9" ~ "5-9 year",
-    is.na(cstrata_ac) & type %in% c("VS_Match", "HDSS_NoMatch") & cstatus_agesp_dss == "10+" ~ "10+",
+    is.na(cstrata_ac) & type %in% c("VS_Match", "HDSS_NoMatch") & cstatus_agesp_dss == "1-4 years" ~ "1-4 years (other)",
+    is.na(cstrata_ac) & type %in% c("VS_Match", "HDSS_NoMatch") & cstatus_agesp_dss == "5-9 years" ~ "5-9 years",
+    is.na(cstrata_ac) & type %in% c("VS_Match", "HDSS_NoMatch") & cstatus_agesp_dss == "10+ years" ~ "10+ years",
     TRUE ~ cstrata_ac
   ))
 nrow(subset(overall_aug1, is.na(cstrata_ac))) # 0
