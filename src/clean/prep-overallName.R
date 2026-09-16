@@ -9,14 +9,13 @@ library(tidyr)
 library(dplyr)
 library(haven)
 library(stringr)
+library(openxlsx)
 #' Inputs
-# survey_final_all2: livebirth and stillbirth records from the survey
-#dat <- read_dta("./data/20250930/overall_name_lb.dta")
 dat <- read_dta("./data/20260412/overall_name_lb.dta")
 ################################################################################
 
 # Variables that are different with overall_date
-# overall_date - overall_dob
+# overall_date vs. overall_name_lb
 # preg_res_dss - po
 # dob_m_dss - dob_m
 # coo_m_dss - coo_m
@@ -571,7 +570,7 @@ dat <- datnew
 table(dat$match_n2, useNA = "always")
 # 1968 in both
 
-# Match: add new matches by name and DOB ---------------------------------------------------------
+# Match: add new matches by sex and DOB ---------------------------------------------------------
 
 dat <- dat %>%
   mutate(recnr = 1:n())
@@ -734,6 +733,24 @@ dat <- datnew
 table(dat$match_n2, useNA = "always")
 # 1968 in both, 79 new match
 
+
+# Export: additions for inspection in hdss --------------------------------
+
+# Zakir
+# July 27, 2026
+# I need your help in identifying a few cases. Could you please share the events (i.e., livebirth, stillbirth, miscarriage, abortion) that were recorded in the survey (FPH ) but were not found in the HDSS records? As we discussed earlier, we would like to review these cases in the HDSS database to understand why the events were missed.
+# 
+# Please share the following information for each case:
+# •	Mother's RID
+# •	Pregnancy serial number
+# •	Event date
+
+df_additions <- dat %>%
+  filter(match_n2 %in% "Only in survey") %>%
+  select(serial, serial1, match_n, match_n2, rid_m, rid_c, uid_c_sur)
+nrow(df_additions) # 176
+#write.xlsx(df_additions, "./gen/clean/acsu5mr-additions_20260916.xlsx")
+
 # Rename variables with dss suffix ----------------------------------------
 
 # Rename columns that actually came from the DSS to make that clear
@@ -745,6 +762,8 @@ dat <- dat %>%
          ageext_m_dss = age_extraction_m,
          doi_m_dss = mot_in_date,
          toi_m_dss = f_intype,
+         doo_m_dss = doo_m,
+         coo_m_dss = coo_m,
          migres_m_dss = mig_result,
          pregout_dss = po,
          name_c_dss = name_c,

@@ -1,7 +1,5 @@
 ################################################################################
-#' @description analyse at the event-level, denominator D
-#' Assess:
-#' characteristics of omissions of live births and deaths
+#' @description analyse characteristics associated with omission and addition of deaths
 #' @return 
 ################################################################################
 #' Clear environment
@@ -50,7 +48,8 @@ vars <- c(
   "hhsizecat_sur",
   "intinterupt_sur", "observer_sur", "intcoop_sur", "otherwork_sur",
   "breakdown_sur", "support_sur",
-  "cstatus_agesp_comb", "cstrata_ac"
+  "cstatus_agesp_comb", #"cstrata_ac"
+  "cstrata_ac_neo", "cstrata_ac_pneo", "cstrata_ac_1to4"
 )
 
 datDth <- dat %>%
@@ -60,9 +59,24 @@ datDth <- dat %>%
     type == "HDSS_NoMatch" ~ "Omission",
     TRUE ~ NA
   ))  %>% 
-  select(type, all_of(vars)) %>%
   mutate(birthrecency_cat = factor(birthrecency_cat, levels = c("0-4", "5-9", "10-14", "15+"))) %>%
-  mutate(deathrecency_cat = factor(deathrecency_cat, levels = c("0-4", "5-9", "10-14", "15+"))) 
+  mutate(deathrecency_cat = factor(deathrecency_cat, levels = c("0-4", "5-9", "10-14", "15+"))) %>%
+  mutate(cstrata_ac_neo = case_when(
+    cstrata_ac == "Neonatal (other)" ~ "Other",
+    cstrata_ac == "Neonatal (birth asphyxia)" ~ "Birth asphyxia",
+    TRUE ~ "Not applicable"
+  ),
+  cstrata_ac_pneo = case_when(
+    cstrata_ac == "Postneonatal (other)" ~ "Other",
+    cstrata_ac == "Postneonatal (RI+con)" ~ "RI+con",
+    TRUE ~ "Not applicable"
+  ),
+  cstrata_ac_1to4 = case_when(
+    cstrata_ac == "1-4 years (other)" ~ "Other",
+    cstrata_ac == "1-4 years (drowning)" ~ "Drowning",
+    TRUE ~ "Not applicable"
+  )) %>%
+  select(type, all_of(vars))
 # refactor for chi-squared
 
 # create counts and percentages
@@ -92,6 +106,9 @@ tabChi <- map_dfr(vars, function(v) {
   # drop missing values from chi-squared
   # some variables added after beginning of data collection, don't want to count these as missing
   mydat <- mydat[!(mydat[[v]] == "Missing"),]
+  
+  # drop "Not applicable" for the COD cases that are in other ages
+  mydat <- mydat[!(mydat[[v]] == "Not applicable"),]
   
   if(v == "cstrata_ac"){
     #mydat <- mydat[!(mydat[[v]] == "5-9 year"),]
@@ -154,7 +171,8 @@ v_hh <- c("hhsizecat_sur", "observer_sur", "intinterupt_sur", "intcoop_sur", "br
 # women-level
 v_wom <- c("magecat3_int", "meducat_sur", "paritymaxcat_comb")
 # child-level
-v_ch <- c("birthorder_cat_comb", "birthrecency_cat", "deathrecency_cat", "cstatus_agesp_comb", "cstrata_ac")
+v_ch <- c("birthorder_cat_comb", "birthrecency_cat", "deathrecency_cat", "cstatus_agesp_comb", #"cstrata_ac")
+          "cstrata_ac_neo", "cstrata_ac_pneo", "cstrata_ac_1to4")
 v_all <- c(v_hh, v_wom, v_ch, "total")
 length(v_all) == length(unique(tabDth$variable)) # TRUE
 df_varrank <- data.frame(variable = v_all,
@@ -205,24 +223,31 @@ tabDth <- tabDth %>%
     variable == "cstatus_agesp_comb" & value == "1-4 years" ~ 4,
     variable == "cstatus_agesp_comb" & value == "5-9 years" ~ 5,
     variable == "cstatus_agesp_comb" & value == "10+ years" ~ 6,
-    variable == "cstrata_ac" & value == "Surviving" ~ 1,
-    variable == "cstrata_ac" & value == "Neonatal (birth asphyxia)" ~ 2,
-    variable == "cstrata_ac" & value == "Neonatal (other)" ~ 3,
-    variable == "cstrata_ac" & value == "Neonatal (unknown)" ~ 4,
-    variable == "cstrata_ac" & value == "Postneonatal (RI+con)" ~ 5,
-    variable == "cstrata_ac" & value == "Postneonatal (other)" ~ 6,
-    variable == "cstrata_ac" & value == "Postneonatal (unknown)" ~ 7,
-    variable == "cstrata_ac" & value == "1-4 years (drowning)" ~ 8,
-    variable == "cstrata_ac" & value == "1-4 years (other)" ~ 9,
-    variable == "cstrata_ac" & value == "1-4 years (unknown)" ~ 9,
-    variable == "cstrata_ac" & value == "5-9 years" ~ 10,
-    variable == "cstrata_ac" & value == "10+ years" ~ 11,
+    # variable == "cstrata_ac" & value == "Surviving" ~ 1,
+    # variable == "cstrata_ac" & value == "Neonatal (birth asphyxia)" ~ 2,
+    # variable == "cstrata_ac" & value == "Neonatal (other)" ~ 3,
+    # variable == "cstrata_ac" & value == "Neonatal (unknown)" ~ 4,
+    # variable == "cstrata_ac" & value == "Postneonatal (RI+con)" ~ 5,
+    # variable == "cstrata_ac" & value == "Postneonatal (other)" ~ 6,
+    # variable == "cstrata_ac" & value == "Postneonatal (unknown)" ~ 7,
+    # variable == "cstrata_ac" & value == "1-4 years (drowning)" ~ 8,
+    # variable == "cstrata_ac" & value == "1-4 years (other)" ~ 9,
+    # variable == "cstrata_ac" & value == "1-4 years (unknown)" ~ 9,
+    # variable == "cstrata_ac" & value == "5-9 years" ~ 10,
+    # variable == "cstrata_ac" & value == "10+ years" ~ 11,
+    variable == "cstrata_ac_neo" & value == "Birth asphyxia" ~ 1,
+    variable == "cstrata_ac_neo" & value == "Other" ~ 2,
+    variable == "cstrata_ac_pneo" & value == "RI+con" ~ 1,
+    variable == "cstrata_ac_pneo" & value == "Other" ~ 2,
+    variable == "cstrata_ac_1to4" & value == "Drowning" ~ 1,
+    variable == "cstrata_ac_1to4" & value == "Other" ~ 2,
     TRUE ~ 1
   )) %>%
   arrange(variablerank, valuerank)
 
 tabDth <- tabDth %>%
-  filter(!(value %in% c("Neonatal (unknown)", "Postneonatal (unknown)", "1-4 years (unknown)")))
+  #filter(!(value %in% c("Neonatal (unknown)", "Postneonatal (unknown)", "1-4 years (unknown)")))
+  filter(!(value %in% c("Not applicable")))
 
 # clean up variable names
 tabDth <- tabDth %>%
@@ -241,7 +266,10 @@ tabDth <- tabDth %>%
     variable == "birthrecency_cat"   ~ "Birth recall period (years)",
     variable == "deathrecency_cat"   ~ "Death recall period (years)",
     variable == "cstatus_agesp_comb"   ~ "Age-at-death",
-    variable == "cstrata_ac"   ~ "Age-specific cause of death",
+    #variable == "cstrata_ac"   ~ "Age-specific cause of death",
+    variable == "cstrata_ac_neo"   ~ "Neonatal cause of death",
+    variable == "cstrata_ac_pneo"   ~ "Postneonatal cause of death",
+    variable == "cstrata_ac_1to4"   ~ "1-4 years cause of death",
     variable == "total"   ~ "Total",
   )) %>%
   select(-c(variablerank, valuerank)) 
@@ -291,9 +319,6 @@ output_path <- here::here("gen/figures", "table-dths-char-sampA.docx")
 print(doc, target = output_path)
 cat("Saved to:", output_path, "\n")
 
-
-
-
 # Sample C (omissions, matches, additions): Counts, per, chi-squared ------------------------------------
 
 vars <- c(
@@ -302,7 +327,8 @@ vars <- c(
   "hhsizecat_sur",
   "intinterupt_sur", "observer_sur", "intcoop_sur", "otherwork_sur",
   "breakdown_sur", "support_sur",
-  "cstatus_agesp_comb", "cstrata_ac"
+  "cstatus_agesp_comb", #"cstrata_ac"
+  "cstrata_ac_neo", "cstrata_ac_pneo", "cstrata_ac_1to4"
 )
 
 datDth <- dat %>%
@@ -313,9 +339,24 @@ datDth <- dat %>%
     type == "HDSS_NoMatch" ~ "Omission",
     TRUE ~ NA
   ))  %>% 
-  select(type, all_of(vars)) %>%
   mutate(birthrecency_cat = factor(birthrecency_cat, levels = c("0-4", "5-9", "10-14"))) %>%
-  mutate(deathrecency_cat = factor(deathrecency_cat, levels = c("0-4", "5-9", "10-14"))) 
+  mutate(deathrecency_cat = factor(deathrecency_cat, levels = c("0-4", "5-9", "10-14"))) %>%
+  mutate(cstrata_ac_neo = case_when(
+    cstrata_ac == "Neonatal (other)" ~ "Other",
+    cstrata_ac == "Neonatal (birth asphyxia)" ~ "Birth asphyxia",
+    TRUE ~ "Not applicable"
+  ),
+  cstrata_ac_pneo = case_when(
+    cstrata_ac == "Postneonatal (other)" ~ "Other",
+    cstrata_ac == "Postneonatal (RI+con)" ~ "RI+con",
+    TRUE ~ "Not applicable"
+  ),
+  cstrata_ac_1to4 = case_when(
+    cstrata_ac == "1-4 years (other)" ~ "Other",
+    cstrata_ac == "1-4 years (drowning)" ~ "Drowning",
+    TRUE ~ "Not applicable"
+  )) %>%
+  select(type, all_of(vars))
 # refactor for chi-squared
 
 # create counts and percentages
@@ -351,6 +392,9 @@ tabChi <- map_dfr(vars, function(v) {
   # drop missing values from chi-squared
   # some variables added after beginning of data collection, don't want to count these as missing
   mydat <- mydat[!(mydat[[v]] == "Missing"),]
+  
+  # drop "Not applicable" for the COD cases that are in other ages
+  mydat <- mydat[!(mydat[[v]] == "Not applicable"),]
   
   if(v == "cstrata_ac"){
     #mydat <- mydat[!(mydat[[v]] == "5-9 year"),]
@@ -415,7 +459,8 @@ v_hh <- c("hhsizecat_sur", "observer_sur", "intinterupt_sur", "intcoop_sur", "br
 # women-level
 v_wom <- c("magecat3_int", "meducat_sur", "paritymaxcat_comb")
 # child-level
-v_ch <- c("birthorder_cat_comb", "birthrecency_cat", "deathrecency_cat", "cstatus_agesp_comb", "cstrata_ac")
+v_ch <- c("birthorder_cat_comb", "birthrecency_cat", "deathrecency_cat", "cstatus_agesp_comb", #"cstrata_ac")
+          "cstrata_ac_neo", "cstrata_ac_pneo", "cstrata_ac_1to4")
 v_all <- c(v_hh, v_wom, v_ch, "total")
 length(v_all) == length(unique(tabDth$variable)) # TRUE
 df_varrank <- data.frame(variable = v_all,
@@ -466,24 +511,31 @@ tabDth <- tabDth %>%
     variable == "cstatus_agesp_comb" & value == "1-4 years" ~ 4,
     variable == "cstatus_agesp_comb" & value == "5-9 years" ~ 5,
     variable == "cstatus_agesp_comb" & value == "10+ years" ~ 6,
-    variable == "cstrata_ac" & value == "Surviving" ~ 1,
-    variable == "cstrata_ac" & value == "Neonatal (birth asphyxia)" ~ 2,
-    variable == "cstrata_ac" & value == "Neonatal (other)" ~ 3,
-    variable == "cstrata_ac" & value == "Neonatal (unknown)" ~ 4,
-    variable == "cstrata_ac" & value == "Postneonatal (RI+con)" ~ 5,
-    variable == "cstrata_ac" & value == "Postneonatal (other)" ~ 6,
-    variable == "cstrata_ac" & value == "Postneonatal (unknown)" ~ 7,
-    variable == "cstrata_ac" & value == "1-4 years (drowning)" ~ 8,
-    variable == "cstrata_ac" & value == "1-4 years (other)" ~ 9,
-    variable == "cstrata_ac" & value == "1-4 years (unknown)" ~ 9,
-    variable == "cstrata_ac" & value == "5-9 years" ~ 10,
-    variable == "cstrata_ac" & value == "10+ years" ~ 11,
+    # variable == "cstrata_ac" & value == "Surviving" ~ 1,
+    # variable == "cstrata_ac" & value == "Neonatal (birth asphyxia)" ~ 2,
+    # variable == "cstrata_ac" & value == "Neonatal (other)" ~ 3,
+    # variable == "cstrata_ac" & value == "Neonatal (unknown)" ~ 4,
+    # variable == "cstrata_ac" & value == "Postneonatal (RI+con)" ~ 5,
+    # variable == "cstrata_ac" & value == "Postneonatal (other)" ~ 6,
+    # variable == "cstrata_ac" & value == "Postneonatal (unknown)" ~ 7,
+    # variable == "cstrata_ac" & value == "1-4 years (drowning)" ~ 8,
+    # variable == "cstrata_ac" & value == "1-4 years (other)" ~ 9,
+    # variable == "cstrata_ac" & value == "1-4 years (unknown)" ~ 9,
+    # variable == "cstrata_ac" & value == "5-9 years" ~ 10,
+    # variable == "cstrata_ac" & value == "10+ years" ~ 11,
+    variable == "cstrata_ac_neo" & value == "Birth asphyxia" ~ 1,
+    variable == "cstrata_ac_neo" & value == "Other" ~ 2,
+    variable == "cstrata_ac_pneo" & value == "RI+con" ~ 1,
+    variable == "cstrata_ac_pneo" & value == "Other" ~ 2,
+    variable == "cstrata_ac_1to4" & value == "Drowning" ~ 1,
+    variable == "cstrata_ac_1to4" & value == "Other" ~ 2,
     TRUE ~ 1
   )) %>%
   arrange(variablerank, valuerank)
 
 tabDth <- tabDth %>%
-  filter(!(value %in% c("Neonatal (unknown)", "Postneonatal (unknown)", "1-4 years (unknown)")))
+  #filter(!(value %in% c("Neonatal (unknown)", "Postneonatal (unknown)", "1-4 years (unknown)")))
+  filter(!(value %in% c("Not applicable")))
 
 # clean up variable names
 tabDth <- tabDth %>%
@@ -502,7 +554,10 @@ tabDth <- tabDth %>%
     variable == "birthrecency_cat"   ~ "Birth recall period (years)",
     variable == "deathrecency_cat"   ~ "Death recall period (years)",
     variable == "cstatus_agesp_comb"   ~ "Age-at-death",
-    variable == "cstrata_ac"   ~ "Age-specific cause of death",
+    #variable == "cstrata_ac"   ~ "Age-specific cause of death",
+    variable == "cstrata_ac_neo"   ~ "Neonatal cause of death",
+    variable == "cstrata_ac_pneo"   ~ "Postneonatal cause of death",
+    variable == "cstrata_ac_1to4"   ~ "1-4 years cause of death",
     variable == "total"   ~ "Total",
   )) %>%
   select(-c(variablerank, valuerank)) 
@@ -550,7 +605,7 @@ doc <- read_docx() %>%
   body_add_par("Table 1", style = "heading 1") %>%
   body_add_flextable(ft)
 
-output_path <- here::here("gen/figures", "table-dths-char.docx")
+output_path <- here::here("gen/figures", "table-dths-char-sampC.docx")
 print(doc, target = output_path)
 cat("Saved to:", output_path, "\n")
 

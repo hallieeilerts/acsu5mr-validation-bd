@@ -10,8 +10,6 @@ library(dplyr)
 library(haven)
 library(stringr)
 #' Inputs
-# survey_final_all2: livebirth and stillbirth records from the survey
-#dat <- read_dta("./data/20250930/overall_date.dta")
 dat <- read_dta("./data/20260412/overall_date.dta")
 ################################################################################
 

@@ -9,6 +9,7 @@ library(tidyr)
 library(dplyr)
 library(haven)
 library(lubridate)
+library(openxlsx)
 #' Inputs
 dat <- readRDS("./gen/augment/overallName-aug.rds")
 ################################################################################
@@ -62,6 +63,9 @@ dat <- dat %>%
 
 
 # Mother-level characteristics --------------------------------------------
+
+# Self-rated health
+table(dat$self_hscore)
 
 # Maternal age at interview 
 # note that if an hdss pregnancy outcome/child was not matched to the VS, there will not be an int_date
@@ -189,6 +193,12 @@ table(dat$d4, useNA = "always")
 table(dat$d7, useNA = "always")
 # other working during interview
 table(dat$d10, useNA = "always")
+# emotional breakdown
+table(dat$d11, useNA = "always")
+table(dat$d12, useNA = "always")
+# social support
+table(dat$d13, useNA = "always")
+table(dat$d14, useNA = "always")
 
 # categorize c244: whether someone was there during interview
 table(dat$c244, useNA = "always")
@@ -631,14 +641,14 @@ dat <- dat %>%
 
 # Check id vars -----------------------------------------------------------
 
-nrow(dat) # 3056
+nrow(dat) # 3106
 
 # mother_id
 length(unique(dat$rid_m)) # 848
 nrow(subset(dat, is.na(rid_m))) # 0
 
 # child id in dss
-length(unique(dat$rid_c)) # 2160
+length(unique(dat$rid_c)) # 2161
 
 # count from 1 to n in survey
 length(unique(dat$serial)) # 2649
@@ -650,7 +660,63 @@ length(unique(dat$uid_c_sur)) # 2649
 # child unique id serial1 + parity in dss
 length(unique(dat$uid_c_dss)) # 2506
 
+# Organize: final anaytical dataset for icddr,b -----------------------------------------
+
+# Move matching variables to front
+dat <- dat %>%
+  relocate(match_n2, match_score, type, .after = match_n)
+
+# Delete variables that were created in the raw data files
+# (created by icddr,b team prior to sharing)
+# These are not being used, so removing to avoid confusion
+dat <- dat %>%
+  select(-c(HH_size, asset_score, asset_quintile, hhassets_sur))
+
+# Move all recode covariates to end
+dat <- dat %>%
+  relocate(mage_int, magecat_int, magecat2_int, magecat3_int,
+           hhsize_sur, hhsizecat_sur,
+           parity_sur, paritymax_sur, paritymaxcat_sur,
+           parity_dss, paritymax_dss, paritymaxcat_dss,
+           paritymax_comb, paritymaxcat_comb, 
+           meducat_sur, observer_sur, intinterupt_sur, intcoop_sur, 
+           otherwork_sur, breakdown_sur, support_sur, 
+           birthorder_comb, birthorder_cat_comb,
+           dob_c_comb, dod_c_comb, 
+           birthrecency_sur,  birthrecency_cat_sur,
+           birthrecency_dss, birthrecency_cat_dss,
+           birthrecency, birthrecency_cat,
+           deathrecency_sur, deathrecency_cat_sur, 
+           deathrecency_dss, deathrecency_cat_dss,
+           deathrecency, deathrecency_cat,
+           .after = last_col())
+
+# Move all dss demographic variables after validation study identifying variables
+# (study ids, whether available, date of interview)
+dat <- dat %>%
+  relocate(name_m_dss, age_m_dss, dob_m_dss, doo_m_dss, coo_m_dss, 
+           ageout_m_dss, ageext_m_dss, doi_m_dss, migres_m_dss, toi_m_dss, 
+           pregout_dss, name_c_dss, sex_c_dss, dob_c_dss, dod_c_dss, 
+           aadd_dss, aadm_dss, aady_dss, cod_c_dss,
+           cstatus_dss, cstatus_agesp_dss, 
+           .after = ifr)
+
+
+# Move demographic variables derived from survey after last survey variable
+dat <- dat %>%
+  relocate(aad_unit_sur, aad_val_sur, aadm_sur, aadd_sur, aady_sur, dod_c_sur,
+           cstatus_sur, cstatus_agesp_sur, .after = d14)
+
+
+# Move status variables after last derived survey variable
+dat <- dat %>%
+  relocate(cstatus_comb, cstatus_agesp_comb, 
+           mstrata_ac, mstrata_a, mstrata_c, 
+           cstrata_ac, cstrata_a, cstrata_c, cstrata_c_binary, .after = cstatus_agesp_sur)
+
 # Save output(s) ----------------------------------------------------------
 
 saveRDS(dat, "./gen/augment/overallName-recode.rds")
+#write.xlsx(dat, "./gen/augment/ACSU5M-VS-analytical-dataset_20260916.xlsx")
+
 

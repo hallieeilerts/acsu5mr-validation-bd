@@ -1,7 +1,7 @@
 ################################################################################
-#' @description Overall contains survey records that matched to HDSS and survey records that did not.
-#' To make a true overall file, add records from HDSS that didn't match to VS.
-#' Also add VS records of abortion and miscarriage for which matching wasn't attempted.
+#' @description Overall contains matched and unmatched live births from the HDSS and survey,.
+#' To make a true overall file, add records of other pregnancy outcomes from both sources (abortion and miscarriage) 
+#' for which matching wasn't attempted.
 #' @return 
 ################################################################################
 #' Clear environment
@@ -70,7 +70,7 @@ overall %>%
   filter(!is.na(uid_c_sur) & n > 1) %>%
   nrow() # 0
 
-# Add from DSS ------------------------------------------------------------
+# Add variables from DSS ------------------------------------------------------------
 
 # in overallDate, the parity variable from dss was missing in overall file
 # not the case for overallDob. so don't need to add
@@ -326,11 +326,7 @@ overall %>%
 overall <- overall %>%
   select(-flag)
 
-# Add non-matching rows from the HDSS -------------------------------------
-
-# in overallDOB, this is only events for which matching was not attempted
-# ie, stillbirths, miscarriage, abortions 
-# in overallDate, this included non-matched live births as well
+# Augment: other pregnancy outcomes from the HDSS -------------------------------------
 
 # From the HDSS
 # stillbirths, miscarriage, abortions that were not matched to VS (HDSS - not matched)
@@ -460,7 +456,7 @@ overall_aug1 <- overall_aug1 %>%
   ))
 nrow(subset(overall_aug1, is.na(cstrata_ac))) # 0
 
-# Add non-matching rows from VS -------------------------------------------
+# Augment: other pregnancy outcomes from VS -------------------------------------------
 
 # From the validation study
 # stillbirths for which no matching with hdss was attempted (VS - STB)

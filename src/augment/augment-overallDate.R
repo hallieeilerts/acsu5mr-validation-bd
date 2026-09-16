@@ -1,7 +1,8 @@
 ################################################################################
-#' @description Overall contains survey records that matched to HDSS and survey records that did not.
-#' To make a true overall file, add records from HDSS that didn't match to VS.
-#' Also add VS records of abortion and miscarriage for which matching wasn't attempted.
+#' @description Overall contains all live births from the survey and matched live births from the HDSS.
+#' To make a true overall file, add unmmatched live births from HDSS, and
+#' records of other pregnancy outcomes from both sources (abortion and miscarriage) 
+#' for which matching wasn't attempted.
 #' @return 
 ################################################################################
 #' Clear environment
@@ -71,7 +72,7 @@ overall %>%
 # looks like some duplicate singles records (uid_c_dss == 1027+2, 1530+5)
 # and then a couple double matches for twins
 
-# Add from DSS ------------------------------------------------------------
+# Add variables from DSS ------------------------------------------------------------
 
 # parity variable from dss is missing in overall file
 df_parity_dss <- hdss %>%
@@ -314,7 +315,7 @@ overall %>%
 overall <- overall %>%
   select(-flag)
 
-# Add non-matching rows from the HDSS -------------------------------------
+# Augment: unmatched live births, and other pregnancy outcomes from the HDSS -------------------------------------
 
 # From the HDSS
 # live births, stillbirths, miscarriage, abortions that were not matched to VS (HDSS - not matched)
@@ -494,7 +495,7 @@ overall_aug1 <- overall_aug1 %>%
   ))
 nrow(subset(overall_aug1, is.na(cstrata_ac))) # 0
 
-# Add non-matching rows from VS -------------------------------------------
+# Augment: other pregnancy outcomes from VS -------------------------------------------
 
 # From the validation study
 # miscarriages for which no matching with hdss was attempted (VS - MSC)

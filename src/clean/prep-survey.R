@@ -1,7 +1,7 @@
 ################################################################################
-#' @description Prepare survey data for augmenting overall
-#' (overall file contains all survey obs, with matched hdss obs. 
-#' need to add abr and msc from survey for which matching wasnt attempted)
+#' @description Prepare survey data for augmenting overall file
+#' (overall file contains all survey obs with matched hdss obs. 
+#' Need to add abortion and miscarriage from survey for which matching wasn;t attempted)
 #' Drop unnecessary variables
 #' Clean variables
 #' Standardize variable names
@@ -17,7 +17,7 @@ library(stringr)
 #' Inputs
 # survey_final_all2: livebirth and stillbirth records from the survey
 dat <- read_dta("./data/20260412/survey_final_all2.dta")
-# previous version of the file that had variables sample and sample2
+# previous version of the file that had sample selection variables (sample and sample2)
 dat_sample <- read_dta("./data/20250930/survey_final_all2.dta")
 ################################################################################
 

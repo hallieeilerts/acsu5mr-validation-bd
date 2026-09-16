@@ -13,11 +13,6 @@ library(tidyr)
 library(dplyr)
 library(haven)
 #' Inputs
-## hdss_final_all2: livebirth and stillbirth records from the HDSS
-# Contains all updated HDSS data of the mother and child
-# Newly added variables: CCOD cause of death up to May 31, 2025; 
-# alive (vital status on survey date); date and type of Mother’s first entry to Matlab
-#dat <- read_dta("./data/20250930/hdss_final_all2.dta")
 dat <- read_dta("./data/20260412/hdss_final_all2.dta")
 ################################################################################
 
@@ -87,10 +82,9 @@ dat <- dat %>%
     dob_m,  # mother dob
     coo_m,  # mother cause of out
     doo_m,  # mother date of out
-    #mot_in_date, # mothers first in date
-    #f_intype, # first in type of mother
     m_findate, # mothers first in date
     m_fintype, # first in type of mother
+    m_lindate,
     parity_n_dss, # parity number dss
     po, # pregnancy outcome type
     name_c, # child name
@@ -131,8 +125,8 @@ dat <- dat %>%
   rename(dob_m_dss = dob_m,
          coo_m_dss = coo_m,
          doo_m_dss = doo_m,
-         doi_m_dss = m_findate,
-         toi_m_dss = m_fintype,
+         doi_m_dss = m_findate, # delete m_lindate which is the same
+         toi_m_dss = m_fintype, # delete  f_intype which is the same
          name_m_dss = name_m,
          pregout_dss = po,
          name_c_dss = name_c,
@@ -140,7 +134,8 @@ dat <- dat %>%
          dob_c_dss = dob_c,
          dod_c_dss = dod_c,
          cod_c_dss = CCOD,
-         parity_dss = parity_n_dss)
+         parity_dss = parity_n_dss) %>%
+  select(-c(m_lindate, f_intype))
 
 # Rename variables with sur suffix ----------------------------------------
 
@@ -187,7 +182,6 @@ dat <- dat %>%
 # tidy
 dat <- dat[order(dat$rid_m, dat$dob_c_dss), ]
 
-
 # check to see have all desired variables from both survey and hdss
 dat %>%
   select(rid_m, # mother id for both survey and dss, date of interview
@@ -195,14 +189,6 @@ dat %>%
          rid_c, pregout_dss, cstatus_dss, cstatus_agesp_dss, dob_c_dss, dod_c_dss, cod_c_dss # child-level information from dss
          ) %>%
   head()
-
-# dat %>%
-#   filter(rid_m %in% "3DX1016507") %>%
-#   select(rid_m, # mother id for both survey and dss, date of interview
-#          #mstrata_a, mstrata_ac, mstrata_c, # mother-level strata drawn from dss for sampling. not provided in this file.
-#          rid_c, pregout_dss, cstatus_dss, cstatus_agesp_dss, dob_c_dss, dod_c_dss, cod_c_dss # child-level information from dss
-#   ) %>%
-#   View()
 
 # Save output(s) ----------------------------------------------------------
 
